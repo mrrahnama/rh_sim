@@ -1,0 +1,13 @@
+{
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": false,
+    // "python.linting.pylintArgs": [
+    //     "--extension-pkg-whitelist=PyQt5"
+    // ],
+    "python.pythonPath": "C:\\Users\\Mohammadreza\\AppData\\Local\\Programs\\Python\\Python38\\python.exe",
+    "files.associations": {
+        "*.py": "python",
+        "iostream": "cpp"
+    },
+}

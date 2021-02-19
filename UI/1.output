@@ -1,0 +1,4 @@
+  File "C:/SSD/Uni/Thesis/Source/UI/1.py", line 29
+    1_support.init(root, top)
+     ^
+SyntaxError: invalid decimal literal
