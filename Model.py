@@ -1,4 +1,5 @@
 import random
+from numpy import random
 from mesa.model import Model
 from mesa.space import SingleGrid,MultiGrid
 from mesa.time import RandomActivation
@@ -53,7 +54,7 @@ class Market(Model):
         self.datacollector = DataCollector(model_data)
         self.datacollector.collect(self)
     def step(self):
-        self.generateCustomer()
+        #self.generateCustomers()
         self.schedule.step()
         self.datacollector.collect(self)
         # if not(self.grid.exists_empty_cells()):
@@ -80,18 +81,37 @@ class Market(Model):
                     seller.inventory_available()
             # Build a dictionary of the member names and values...
                     w.writerow({k:getattr(seller,k) for k in field_names})
-    def generateCustomer(self):
+    def generateCustomers(self):
         for cusType in self.customerTypes:
-            pass
-            
-    def create_custpomers(self, customerTypes= None,poisson=""):
-        pass
+            startid=self.customers.count()
+            self.customers.extend(self.create_customers(cusType, starid))
+        self.addCusGrid()
+        self.addCusSch()
+    def create_customer_custype(self, customerType, id):
+        if isinstance(customerType, CustomerType):  #TODO:  change  type to customerType 
+            uid = id
+            customer_generated = []
+            populationSize = random.poisson(lam=customerType.getLambda(self.schedule.steps))
+            for i in range(populationSize):
+                new_customer = Customer(uid, self)
+                new_customer.lifetime = customerType.sampleCustomer.sampleCustomer.lifetime
+                new_customer.preference_list = customerType.sampleCustomer.preference_list
+                new_customer.seller_preferencelist = customerType.sampleCustomer.seller_preferencelist
+                new_customer.type_name = customerType.type_name
+                customer_generated.append(new_customer)
+                uid = uid + 1
+            return customer_generated
+    def addCusSch(self):
+        for new_customer in self.customers:
+            self.schedule.add(new_customer)
+    def addCusGrid(self):
+        for new_customer in self.customers:
+            self.grid.place_agent(new_customer,self.grid.find_empty())
     def create_customers(self,customerTypes=None):
         if isinstance(customerTypes,dict):
-            uid=1
+            uid =1
             customer_generated=0
             for customer_type in customerTypes:
-                for i in range(int(self.number_of_customer*customerTypes[customer_type].percentofall/100)):
                     type_customer = copy.copy(customerTypes[customer_type])
                     new_customer = Customer(uid, self)
                     new_customer.lifetime=type_customer.lifetime
@@ -142,10 +162,33 @@ class Market(Model):
                 self.product_list[row[0]]=row[1]
     def poissonLamGen(self):
         pass
+
+class CustomerType:
+    def __init__(self, samplecustomer=None,typeName="",lambdafile=""):
+        if  isinstance(samplecustomer,Customer):
+            self.sampleCustomer=samplecustomer
+        self.lambdaArray = []
+        self.typeName=typeName
+        self.lambdafile=lambdafile
+    
+    def setlambda(self, filepath=""):
+        if filepath=="":
+            filepath=self.lambdafile
+        with open(filepath, newline='') as csvfile:
+            self.lambdaArray = list(csv.reader(csvfile,quoting=csv.QUOTE_NONNUMERIC))[0]
+
+    def getLambda(self, currentStep):
+        return random.poisson(lam=self.lambdaArray[currentStep])
+
+
+
+            
+
 if __name__ == "__main__":
-
-
-    market1 = Market()
+    #market1 = Market()
+    m=CustomerType(lambdafile="lambda.csv")
+    m.setlambda()
+    print(m.getLambda(12))
     # c1= Customer(1,market1) 
     # # market1.gen_rand_productlist(min_price=100000,price_interval=300000,number=50)
     # market1.gen_usercsv_productlist(file_path="file.csv")
