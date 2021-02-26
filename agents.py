@@ -130,7 +130,6 @@ class Customer(Agent):
         if not(neig):
             pos = self.model.grid.find_empty()
             self.move_to(pos)
-
     def find_store(self):
         agent = random.choice(self.model.sellers)
         pos = self.model.grid.get_neighborhood(agent.pos, False)
@@ -140,7 +139,7 @@ class Customer(Agent):
                 return agent
             # if isinstance(agent, Seller):
             #     self.eat(agent)
-        return 0
+        return False
 
     def buy(self, seller: Seller):
 
@@ -158,7 +157,9 @@ class Customer(Agent):
                         self.model.schedule.steps, seller.unique_id, self.unique_id, p, 1, price))
                     self.alive = False
                     seller.succesful_transaction += 1
-                    break
+                    #self.die()
+                    #break
+                    return True
                 else:
                     if (self.preference_list.get(p) >= price):
                         st=3  #inventory failed
@@ -167,8 +168,7 @@ class Customer(Agent):
                     seller.failed_transaction += 1
                     self.model.transactions.append(negotiation(
                         self.model.schedule.steps, seller.unique_id, self.unique_id, p, 1, price, st))
-        self.leave = True
-
+        return False
     def create_preferencelist(self):
         self.preference_list = {"p1": random.randint(100, 220),
                                 "p2": random.randint(200, 350),
@@ -182,13 +182,12 @@ class Customer(Agent):
         self.model.number_of_customer -= 1
 
     def step(self):
-        if self.leave:
-            self.model.grid.move_to_empty(self)
-            self.leave = False
-        elif  self.alive and self.lifetime > 0:
-            seller = self.find_store()
-            if seller:
-                self.buy(seller)
-                self.lifetime -= 1
-        else:
+        # seller = self.find_store()
+        for seller in self.model.sellers:
+            if self.buy(seller):
+                self.die()
+                return 
+        self.lifetime -= 1
+        if self.lifetime == 0:
             self.die()
+        

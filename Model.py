@@ -26,22 +26,26 @@ class Market(Model):
         self.product_list={}
         self.customers=[]
         self.sellers =[]
+        self.customerTypes=[]
         # if sellerTypes == {}:
         self.create_sellers()
+        for typename,typ in customerTypes.items():
+            c=CustomerType(samplecustomer=typ,typeName=typ.type_name,lambdafile="lambda.csv")
+            c.setlambda()
+            self.customerTypes.append(c)
         # else:
         #     self.create_sellers()
-        if customerTypes == None:
-            self.create_customers()
-        else:
-            self.customerTypes= customerTypes
-            self.create_customers(self.customerTypes)
+        # if customerTypes == None:
+        #     self.create_customers()
+        # else:
+        #     
+            # self.create_customers(self.customerTypes)
         self.transactions =[]
         self.failed_transactions=[]
         self.max_steps=max_steps
         model_data={        
                 "Customer": lambda m: m.number_of_customer,
-                "Seller": lambda m: m.number_of_seller,
-        }
+                "Seller": lambda m: m.number_of_seller}
         # data = {"Customer": lambda m: m.number_of_customer,
         #         "Seller": lambda m: m.number_of_seller,
         #         }
@@ -51,14 +55,17 @@ class Market(Model):
         # "transaction":lambda m: m.transactions,
                 # "faild_transaction" :lambda m: m.failed_transactions,
         # agent_data={"Wealth": lambda x: x.wealth}
+
         self.datacollector = DataCollector(model_data)
         self.datacollector.collect(self)
+        self.generateCustomers()
+
     def step(self):
-        #self.generateCustomers()
+       
         self.schedule.step()
         self.datacollector.collect(self)
         # if not(self.grid.exists_empty_cells()):
-        if self.number_of_customer == 0 or self.schedule.steps>self.max_steps:
+        if  self.schedule.steps > self.max_steps:
             self.running = False
             # br_step_data = pd.DataFrame()
             # self.datacollector.get_model_vars_dataframe()
@@ -81,10 +88,12 @@ class Market(Model):
                     seller.inventory_available()
             # Build a dictionary of the member names and values...
                     w.writerow({k:getattr(seller,k) for k in field_names})
+        self.generateCustomers()
     def generateCustomers(self):
+        self.customers=[]
         for cusType in self.customerTypes:
-            startid=self.customers.count()
-            self.customers.extend(self.create_customers(cusType, starid))
+            startid=len(self.customers)
+            self.customers.extend(self.create_customer_custype(cusType, startid))
         self.addCusGrid()
         self.addCusSch()
     def create_customer_custype(self, customerType, id):
@@ -94,10 +103,10 @@ class Market(Model):
             populationSize = random.poisson(lam=customerType.getLambda(self.schedule.steps))
             for i in range(populationSize):
                 new_customer = Customer(uid, self)
-                new_customer.lifetime = customerType.sampleCustomer.sampleCustomer.lifetime
+                new_customer.lifetime = customerType.sampleCustomer.lifetime
                 new_customer.preference_list = customerType.sampleCustomer.preference_list
                 new_customer.seller_preferencelist = customerType.sampleCustomer.seller_preferencelist
-                new_customer.type_name = customerType.type_name
+                new_customer.type_name = customerType.typeName
                 customer_generated.append(new_customer)
                 uid = uid + 1
             return customer_generated

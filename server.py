@@ -14,7 +14,7 @@ import os
 import pickle
 from listmange import ListManage
 from treamanage import TreeManage
-from UI.styles import breeze_resources
+#from UI.styles import breeze_resources
 
 # from UI.UI_uibased import Ui
 # width = 20
@@ -65,6 +65,7 @@ class RunThread(QtCore.QThread):
         self.is_running = False
         print('stopping thread...')
         self.terminate()
+        
 
 
 class Run_handler():
@@ -152,6 +153,7 @@ class Run_handler():
         simulatin_max_days = int(self.ui.lineEdit_simdays.text())
         #simulation_batch_run = self.ui.checkbox_batchsimulation.isChecked()
         # batch_run_number=int(self.ui.lineEdit_simNo.text())
+        self.load3testcustomertype()
         self.model_param = {
             "height": height,
             "width": width,
@@ -264,7 +266,13 @@ class Run_handler():
             self.customerTypes[user_customer.type_name] = user_customer
 
             print(user_customer.__dict__)
-
+    def load3testcustomertype(self):
+        with open("customertypes/customer_type_customerpoor.txt", 'rb') as filehandler:
+            self.customerTypes["customerpoor"]=pickle.load(filehandler)
+        with open("customertypes/customer_type_customerrich.txt", 'rb') as filehandler:
+            self.customerTypes["customerrrich"]=pickle.load(filehandler)
+        with open("customertypes/customer_type_customernormal.txt", 'rb') as filehandler:
+            self.customerTypes["customernormal"]=pickle.load(filehandler)
     def saveSellerType(self):
         pass
 
