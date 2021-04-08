@@ -1,13 +1,16 @@
-import random
-from numpy import random
-from mesa.model import Model
-from mesa.space import SingleGrid,MultiGrid
-from mesa.time import RandomActivation
-from mesa.datacollection import DataCollector
-from agents import Customer,Seller ,negotiation
-import pandas as pd
-import csv ,copy
+import copy
+import csv
 import datetime
+import random
+
+from mesa.datacollection import DataCollector
+from mesa.model import Model
+from mesa.space import MultiGrid
+from mesa.time import RandomActivation
+from numpy import random
+
+from agents import Customer, Seller, Negotiation
+
 default_range_product_costs =3000000
 default_number_product = 50
 default_min_price=700000
@@ -27,12 +30,15 @@ class Market(Model):
         self.customers=[]
         self.sellers =[]
         self.customerTypes=[]
+        self.customerTypesDic={}
         # if sellerTypes == {}:
         self.create_sellers()
         for typename,typ in customerTypes.items():
-            c=CustomerType(samplecustomer=typ,typeName=typ.type_name,lambdafile="lambda.csv")
+            c=CustomerType(samplecustomer=typ,typeName=typ.type_name,lambdafile="lambda.csv",contprobfile="contprob.csv")
             c.setlambda()
-            self.customerTypes.append(c)
+            c.setcontprob()
+            #self.customerTypes.append(c)
+            self.customerTypesDic[typ.type_name]=c
         # else:
         #     self.create_sellers()
         # if customerTypes == None:
@@ -44,7 +50,7 @@ class Market(Model):
         self.failed_transactions=[]
         self.max_steps=max_steps
         model_data={        
-                "Customer": lambda m: m.number_of_customer,
+                "Customer": lambda m: len(m.customers),
                 "Seller": lambda m: m.number_of_seller}
         # data = {"Customer": lambda m: m.number_of_customer,
         #         "Seller": lambda m: m.number_of_seller,
@@ -73,7 +79,7 @@ class Market(Model):
             current_time=datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             with open(self.report_address+current_time+'r_detailed_transaction.csv','w',newline='') as f:
             # fieldnames lists the headers for the csv.
-                w = csv.DictWriter(f,fieldnames=vars(negotiation(0,0,0,0,0,0)))
+                w = csv.DictWriter(f, fieldnames=vars(Negotiation(0, 0, 0, 0, 0, 0, 0)))
                 w.writeheader()
                 for obj in self.transactions:
             # Build a dictionary of the member names and values...
@@ -91,8 +97,10 @@ class Market(Model):
         self.generateCustomers()
     def generateCustomers(self):
         self.customers=[]
-        for cusType in self.customerTypes:
+        #for cusType in self.customerTypes:
+        for cusType in self.customerTypesDic.values():
             startid=len(self.customers)
+            print(" step:" +str( self.schedule.steps)+ "     ctyp: " +cusType.typeName +"")
             self.customers.extend(self.create_customer_custype(cusType, startid))
         self.addCusGrid()
         self.addCusSch()
@@ -173,12 +181,14 @@ class Market(Model):
         pass
 
 class CustomerType:
-    def __init__(self, samplecustomer=None,typeName="",lambdafile=""):
+    def __init__(self, samplecustomer=None,typeName="",  lambdafile="", contprobfile=""):
         if  isinstance(samplecustomer,Customer):
             self.sampleCustomer=samplecustomer
         self.lambdaArray = []
+        self.contprobArray=[]
         self.typeName=typeName
         self.lambdafile=lambdafile
+        self.contprobfile=contprobfile
     
     def setlambda(self, filepath=""):
         if filepath=="":
@@ -189,15 +199,25 @@ class CustomerType:
     def getLambda(self, currentStep):
         return random.poisson(lam=self.lambdaArray[currentStep])
 
+    def setcontprob(self, filepath=""):
+        if filepath=="":
+            filepath=self.contprobfile
+        with open(filepath, newline='') as csvfile:
+            self.contprobArray = list(csv.reader(csvfile,quoting=csv.QUOTE_NONNUMERIC))[0]
 
+    def getcontprob(self, tryNo):
+        return self.contprobArray[tryNo-1]
 
             
 
 if __name__ == "__main__":
     #market1 = Market()
-    m=CustomerType(lambdafile="lambda.csv")
+
+    print(random.randn())
+    m=CustomerType(lambdafile="lambda.csv",contprobfile='contprob.csv')
     m.setlambda()
-    print(m.getLambda(12))
+    m.setcontprob()
+    print(m.getcontprob(4))
     # c1= Customer(1,market1) 
     # # market1.gen_rand_productlist(min_price=100000,price_interval=300000,number=50)
     # market1.gen_usercsv_productlist(file_path="file.csv")

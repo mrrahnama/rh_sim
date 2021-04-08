@@ -1,20 +1,22 @@
+import asyncio
+import math
+import os
+import pickle
+import sys
 
-from mesa.visualization.modules import CanvasGrid, ChartModule
-from mesa.visualization.ModularVisualization import ModularServer
-from Model import Market, Seller, Customer
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QTreeWidgetItem
-from PyQt5.QtCore import QFile, QTextStream
+from mesa.visualization.ModularVisualization import ModularServer
+from mesa.visualization.modules import CanvasGrid, ChartModule
+
+from Model import Market, Seller, Customer
 from UI.simui_2_4 import Ui_MainWindow
-import sys
-import math
-import asyncio
-import os
-import pickle
 from listmange import ListManage
 from treamanage import TreeManage
-#from UI.styles import breeze_resources
+
+
+# from UI.styles import breeze_resources
 
 # from UI.UI_uibased import Ui
 # width = 20
@@ -25,7 +27,7 @@ def market_portrayal(agent):
     if agent is None:
         return
     portrayal = {"Shape": "UI/icon/store_color.png", "Filled":
-                 "true", "w": 1, "h": 1, "Layer": 0}
+        "true", "w": 1, "h": 1, "Layer": 0}
     if type(agent) is Seller:
         portrayal["Color"] = "cornflowerblue"
     elif type(agent) is Customer:
@@ -35,7 +37,6 @@ def market_portrayal(agent):
         portrayal["scale"] = 0.6
         portrayal["Layer"] = 1
     return portrayal
-
 
 class RunThread(QtCore.QThread):
     def __init__(self, parent=None, model_param={}):
@@ -49,7 +50,7 @@ class RunThread(QtCore.QThread):
         canvas = CanvasGrid(market_portrayal, width, height)
         chart_count = ChartModule([customer, seller])
         self.server = ModularServer(Market, [
-                                    canvas, chart_count], name="Market simulation", model_params=self.model_param)
+            canvas, chart_count], name="Market simulation", model_params=self.model_param)
         self.server.signalobj.closesignal.connect(self.stop)
 
     def run(self):
@@ -59,15 +60,12 @@ class RunThread(QtCore.QThread):
         # self, width=20, height=20, num_customer=50,num_seller=4
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-        self.server.launch()     # emit new Signal with value
+        self.server.launch()  # emit new Signal with value
 
     def stop(self):
         self.is_running = False
         print('stopping thread...')
         self.terminate()
-        
-
-
 class Run_handler():
     def __init__(self):
         app = QtWidgets.QApplication(sys.argv)
@@ -75,9 +73,9 @@ class Run_handler():
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.MainWindow)
         self.model_param = {}
-        #file = QFile(":/light.qss")
-        #file.open(QFile.ReadOnly | QFile.Text)
-        #stream = QTextStream(file)
+        # file = QFile(":/light.qss")
+        # file.open(QFile.ReadOnly | QFile.Text)
+        # stream = QTextStream(file)
         # app.setStyleSheet(stream.readAll())
         self.ListManagedialog = ListManage(
             "seller", [], self.ui.listWidget_sellerpreferencelist)
@@ -127,7 +125,7 @@ class Run_handler():
         fileName = QtWidgets.QFileDialog.getExistingDirectory(
             self.MainWindow, "Set reports address")
         if fileName:
-            fileName = fileName+"/"
+            fileName = fileName + "/"
             self.ui.lineEdit_reportAddress.setText(fileName)
             print(fileName)
 
@@ -148,10 +146,10 @@ class Run_handler():
     def run(self):
         print("server is running ...")
         # self, width=20, height=20, num_customer=50,num_seller=4
-        height = int(math.sqrt(int(self.ui.lineEdit_customerNo.text()))*2)
+        height = int(math.sqrt(int(self.ui.lineEdit_customerNo.text())) * 2)
         width = height
         simulatin_max_days = int(self.ui.lineEdit_simdays.text())
-        #simulation_batch_run = self.ui.checkbox_batchsimulation.isChecked()
+        # simulation_batch_run = self.ui.checkbox_batchsimulation.isChecked()
         # batch_run_number=int(self.ui.lineEdit_simNo.text())
         self.load3testcustomertype()
         self.model_param = {
@@ -236,13 +234,14 @@ class Run_handler():
         user_customer.lifetime = int(self.ui.lineEdit_lifetime.text())
         type_name = self.ui.comboBox_customertypes.currentText()
         user_customer.type_name = type_name
-        with open("customertypes\\customer_type_"+type_name+'.txt', 'wb') as file1:
+        with open("customertypes\\customer_type_" + type_name + '.txt', 'wb') as file1:
             pickle.dump(user_customer, file1)
         self.customerTypes[type_name] = user_customer
 
         # print(self.ui.comboBox_customertypes.currentText())
         # print(product_preferencelist )
         # print(sellerpreferenceList)
+
     def load_customerType(self):
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
@@ -266,13 +265,15 @@ class Run_handler():
             self.customerTypes[user_customer.type_name] = user_customer
 
             print(user_customer.__dict__)
+
     def load3testcustomertype(self):
         with open("customertypes/customer_type_customerpoor.txt", 'rb') as filehandler:
-            self.customerTypes["customerpoor"]=pickle.load(filehandler)
+            self.customerTypes["customerpoor"] = pickle.load(filehandler)
         with open("customertypes/customer_type_customerrich.txt", 'rb') as filehandler:
-            self.customerTypes["customerrrich"]=pickle.load(filehandler)
+            self.customerTypes["customerrrich"] = pickle.load(filehandler)
         with open("customertypes/customer_type_customernormal.txt", 'rb') as filehandler:
-            self.customerTypes["customernormal"]=pickle.load(filehandler)
+            self.customerTypes["customernormal"] = pickle.load(filehandler)
+
     def saveSellerType(self):
         pass
 
@@ -288,15 +289,14 @@ class Run_handler():
 
     def setup_fromfile(self):
         pass
+
     # def update_customertypeui()
 
     def batchmodesetup(self):
         pass
 
-
 if __name__ == "__main__":
     sim = Run_handler()
-
 
 # server = ModularServer(Market, [canvas,chart_count], name="Market simulation")
 # server.launch()
