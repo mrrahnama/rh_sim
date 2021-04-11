@@ -197,7 +197,7 @@ class CustomerType:
             self.lambdaArray = list(csv.reader(csvfile,quoting=csv.QUOTE_NONNUMERIC))[0]
 
     def getLambda(self, currentStep):
-        return random.poisson(lam=self.lambdaArray[currentStep])
+        return self.lambdaArray[currentStep]
 
     def setcontprob(self, filepath=""):
         if filepath=="":

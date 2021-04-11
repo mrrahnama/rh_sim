@@ -1,5 +1,6 @@
 from numpy import random
 from random import shuffle
+import random as rnn
 
 from mesa.agent import Agent
 
@@ -181,7 +182,10 @@ class Customer(Agent):
                                 "p4": random.randint(400, 590)
                                 }
     def ignorShopping(self,tryNo):
-        if random.randn() >  self.model.customerTypesDic[self.type_name].getcontprob(tryNo):
+        probb=self.model.customerTypesDic[self.type_name].getcontprob(tryNo)
+        rn=rnn.random()
+        print(rn,probb,self.unique_id)
+        if rn >  self.model.customerTypesDic[self.type_name].getcontprob(tryNo):
             return True
         return False
     def die(self):
@@ -198,6 +202,7 @@ class Customer(Agent):
                 self.die()
                 return
             elif self.ignorShopping(self.tryNo):
+
                 break
 
 
