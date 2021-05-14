@@ -3,14 +3,14 @@ import math
 import os
 import pickle
 import sys
-
+import csv
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QTreeWidgetItem
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import CanvasGrid, ChartModule
-
-from Model import Market, Seller, Customer
+import numpy as np
+from Model import Market, Seller, Customer, CustomerType,Product
 from UI.simui_2_4 import Ui_MainWindow
 from listmange import ListManage
 from treamanage import TreeManage
@@ -37,6 +37,132 @@ def market_portrayal(agent):
         portrayal["scale"] = 0.6
         portrayal["Layer"] = 1
     return portrayal
+
+
+class MarketSimulation():
+    def __init__(self):
+        self.customer_types={}
+        self.seller_list={}
+        self.product_list={}
+        self.custome_scheduler=None
+        self.simulation_time=0
+    #customer
+
+    def add_customer_type(self, customer_type):
+        if isinstance(customer_type,CustomerType):
+            self.customer_types[customer_type.typeName] = customer_type
+
+    def remove_customer_type(self,customer_type):
+        if isinstance(customer_type,str):
+            self.customer_types.pop(customer_type)
+        elif isinstance(customer_type,CustomerType):
+            self.customer_types.pop(customer_type.typeName)
+
+    def create_customer_type(self,name ,lifetime , preferenclist, generationlambda, forcebuyprob ):
+        samplecus = Customer(1,Market(),None,lifetime=lifetime)
+        samplecus.preference_list=preferenclist
+        samplecus.type_name=name
+        samplecus.ignorShopping=forcebuyprob
+        custyp = CustomerType(samplecustomer=samplecus)
+        if callable(generationlambda):
+            print("use custom function generation ratio")
+            custyp.getLambda=generationlambda
+        elif isinstance(generationlambda,str):
+            print("use filepath for generation ratio")
+            custyp.setlambda(generationlambda)
+        elif isinstance(generationlambda,int):
+            print("use fix generation ratio")
+            custyp.getLambda=lambda step: generationlambda
+        elif isinstance(generationlambda,list):
+            print("use polynomial generation ratio")
+            custyp.getLambda=lambda step:np.polyval(generationlambda,step)
+        if callable(forcebuyprob):
+            print("use custom function generation ratio")
+            custyp.getcontprob = forcebuyprob
+        elif isinstance(forcebuyprob, str):
+            print("use filepath for generation ratio")
+            custyp.setcontprob(forcebuyprob)
+        elif isinstance(forcebuyprob, float):
+            print("use fix generation ratio")
+            custyp.getcontprob = lambda tryNo: forcebuyprob
+        elif isinstance(forcebuyprob, list):
+            print("use polynomial generation ratio")
+            custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, tryNo)
+        return  custyp
+
+    #seller
+
+    def create_seller(self,strategy,inventory):
+        seller = Seller(len(self.seller_list),Market())
+        seller.inventory=inventory
+        seller.strategy=strategy
+        seller.inventory_available()
+        return seller
+
+    def create_inventory(self,products):
+        inventory={}
+        if isinstance(products,str):
+            with open(products, newline='', encoding='utf-8') as f:
+                infile = csv.DictReader(f,fieldnames=["name", "minvalue", "count"])
+                for row in infile:
+                    inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),available=row["count"])
+        return inventory
+
+    def add_seller(self,seller):
+        if isinstance(seller,Seller):
+            self.seller_list[seller.unique_id]=seller
+
+    def remove_seller(self,seller):
+        if isinstance(seller, int):
+            self.seller_list.pop(seller)
+        elif isinstance(seller, Seller):
+            self.seller_list.pop(seller.unique_id)
+
+    def set_product_list(self,p_list):
+        if(isinstance(p_list,dict)):
+            self.product_list=p_list
+        elif(isinstance(p_list,str)):
+            self.product_list=self.readproductfile(p_list)
+
+    def readproductfile(self,filepath):
+        d={}
+        with open(filepath, newline='', encoding='utf-8') as f:
+            infile = csv.reader(f)
+            d = dict(filter(None, infile))
+        return d
+
+    def set_strategy(self,sellerid,strategy):
+        if hasattr(strategy, "__call__")
+            self.seller_list[sellerid].strategy=strategy
+    #model
+
+    def set_max_days(self,simul_time):
+        self.simulation_time=simul_time
+
+    def set_callerscheduler(self,schedulfunction):
+        self.custome_scheduler = schedulfunction
+
+    #server
+
+    def run(self):
+        pass
+
+    def setup_gui(self,whichgraphs):
+        pass
+
+    def batch_run(self):
+        pass
+#reports
+    def set_report_path(self,dirPath):
+        self.report_path=dirPath
+
+    def set_how_report(self,report_type="minimal"):
+        if report_type in ["all","minimal","seller","periodic transaction"]:
+            self.reports = report_type
+        else:
+            print('report option should be in "all","minimal","seller","periodic transaction" ')
+
+
 
 class RunThread(QtCore.QThread):
     def __init__(self, parent=None, model_param={}):
@@ -66,6 +192,8 @@ class RunThread(QtCore.QThread):
         self.is_running = False
         print('stopping thread...')
         self.terminate()
+
+
 class Run_handler():
     def __init__(self):
         app = QtWidgets.QApplication(sys.argv)
@@ -294,6 +422,7 @@ class Run_handler():
 
     def batchmodesetup(self):
         pass
+
 
 if __name__ == "__main__":
     sim = Run_handler()

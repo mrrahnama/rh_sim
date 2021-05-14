@@ -8,13 +8,13 @@ from mesa.agent import Agent
 class Product:
     def __init__(self, name, minvalue, offer_value=0, available=2):
         self.name = name
-        self.minvalue = minvalue
+        self.minvalue =float(minvalue)
         self.sold = 0
-        self.offervalue = minvalue * 1.15
-        if offer_value > 0:
-            self.offervalue = offer_value
-        self.available = available
-        self.initial = available
+        self.offervalue = float(minvalue )* 1.15
+        if float(offer_value) > 0:
+            self.offervalue = float(offer_value)
+        self.available =int(available)
+        self.initial = self.available
 
 
 class Negotiation:

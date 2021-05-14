@@ -9,7 +9,7 @@ from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 from numpy import random
 
-from agents import Customer, Seller, Negotiation
+from agents import Customer, Seller, Negotiation,Product
 
 default_range_product_costs =3000000
 default_number_product = 50
