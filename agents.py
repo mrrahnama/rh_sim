@@ -36,15 +36,16 @@ class Negotiation:
 
 
 class Seller(Agent):
-    def __init__(self, unique_id, model, pos=None):
+    def __init__(self, unique_id, model, pos=None,inventory=None):
         super().__init__(unique_id, model)
         self.pos = pos
         self.inventory_count = 0
-        self.inventory = dict(
+        if inventory is None:
+            self.inventory = dict(
             {"p" + str(i): Product("p" + str(i), random.randint(1, 100) + i * 100, available=random.randint(2, 20)) for
              i in range(1, 5)})
         self.inventory_available()
-        self.strategy = "DF"
+        self.strategy = self.strategy15
         self.revenue = 0
         self.profit = 0
         # self.transactions =[]
@@ -52,9 +53,9 @@ class Seller(Agent):
         # "Goal-Directed" or "Derivative-Following"
         self.succesful_transaction = 0
         self.failed_transaction = 0
-        if not (self.strategy in ["GD", "DF"]):
-            raise TypeError(
-                "'strategy' must be one of {Goal-Directed->GD or Derivative-Following ->DF}")
+        # if not (self.strategy in ["GD", "DF"]):
+        #     raise TypeError(
+        #         "'strategy' must be one of {Goal-Directed->GD or Derivative-Following ->DF}")
 
     def inventory_available(self):
         self.inventory_count = 0
@@ -64,6 +65,9 @@ class Seller(Agent):
 
     def step(self):
         pass
+
+    def strategy15(self,productname,step,percent = 0.15):
+        return self.inventory[productname].minvalue*(1+percent)
 
     def sell(self, customer, product_name, price):
         p = self.inventory.get(product_name)
@@ -134,7 +138,7 @@ class Customer(Agent):
             self.move_to(pos)
 
     def find_store(self):
-        agent = random.choice(self.model.sellers)
+        agent = random.choice(list(self.model.sellers.values()))
         pos = self.model.grid.get_neighborhood(agent.pos, False)
         for p in pos:
             if self.model.grid.is_cell_empty(p):
@@ -150,7 +154,8 @@ class Customer(Agent):
 
             if p in seller.inventory:
 
-                price = seller.inventory.get(p).offervalue
+                price = seller.strategy(p,self.model.schedule.steps,0.10)
+                # price = seller.inventory.get(p).offervalue
                 if (self.preference_list.get(p) >= price) and (seller.sell(self, p, price)):
 
                     # price=(self.preference_list.get(p)+seller.inventory.get(p).minvalue)/2
@@ -195,7 +200,10 @@ class Customer(Agent):
 
     def step(self):
         # seller = self.find_store()
-        my_sellers = self.model.sellers
+        if isinstance(self.model.sellers,dict):
+            my_sellers = list(self.model.sellers.values())
+        else:
+            my_sellers=self.model.sellers
         random.shuffle(my_sellers)
         for seller in my_sellers:
             if self.buy(seller) :

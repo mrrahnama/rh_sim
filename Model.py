@@ -17,41 +17,42 @@ default_min_price=700000
 
 
 class Market(Model):
-    def __init__(self, width=20, height=20, num_customer=50,num_seller=4,report_address="",max_steps=1000,customerTypes = None):
+    def __init__(self, width=20, height=20, report_address="",max_steps=1000,customerTypes = None,sellers=None):
         Model.__init__(self)
         # super().__init__(self,seed=seed)
-        self.number_of_customer = num_customer
-        self.number_of_seller = num_seller
+        self.product_list={}
+        self.customers=[]
+        self.sellers = {}
+        self.running=True
+        self.customerTypes=[]
+        self.customerTypesDic={}
+        self.number_of_customer = 0
+        self.number_of_seller=0
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.report_address=report_address
-        self.running=True
-        self.product_list={}
-        self.customers=[]
-        self.sellers =[]
-        self.customerTypes=[]
-        self.customerTypesDic={}
-        # if sellerTypes == {}:
-        self.create_sellers()
-        for typename,typ in customerTypes.items():
-            c=CustomerType(samplecustomer=typ,typeName=typ.type_name,lambdafile="lambda.csv",contprobfile="contprob.csv")
-            c.setlambda()
-            c.setcontprob()
-            #self.customerTypes.append(c)
-            self.customerTypesDic[typ.type_name]=c
-        # else:
-        #     self.create_sellers()
-        # if customerTypes == None:
-        #     self.create_customers()
-        # else:
-        #     
-            # self.create_customers(self.customerTypes)
+        if isinstance(sellers,int):
+            self.number_of_seller = sellers
+            self.create_sellers()
+        elif isinstance(sellers,dict):
+            self.number_of_seller=len(sellers)
+            self.sellers = sellers
+            self.addsellerGrid()
+        if customerTypes is not None:
+            for typename,typ in customerTypes.items():
+                if isinstance(typ,Customer):
+                    c=CustomerType(samplecustomer=typ,typeName=typ.type_name,lambdafile="lambda.csv",contprobfile="contprob.csv")
+                    c.setlambda()
+                    c.setcontprob()
+                else:
+                    c=typ
+                self.customerTypesDic[typ.type_name]=c
         self.transactions =[]
         self.failed_transactions=[]
         self.max_steps=max_steps
-        model_data={        
-                "Customer": lambda m: len(m.customers),
-                "Seller": lambda m: m.number_of_seller}
+        model_data={
+            "Customer": lambda m: len(m.customers),
+            "Seller": lambda m: m.number_of_seller}
         # data = {"Customer": lambda m: m.number_of_customer,
         #         "Seller": lambda m: m.number_of_seller,
         #         }
@@ -59,7 +60,7 @@ class Market(Model):
         # "s2": lambda m: m.revenue,
         # }
         # "transaction":lambda m: m.transactions,
-                # "faild_transaction" :lambda m: m.failed_transactions,
+        # "faild_transaction" :lambda m: m.failed_transactions,
         # agent_data={"Wealth": lambda x: x.wealth}
 
         self.datacollector = DataCollector(model_data)
@@ -90,7 +91,7 @@ class Market(Model):
                 field_names=['unique_id','failed_transaction','succesful_transaction','revenue','profit','inventory_count']
                 w = csv.DictWriter(f,fieldnames=field_names)
                 w.writeheader()
-                for seller in self.sellers:
+                for seller in self.sellers.values():
                     seller.inventory_available()
             # Build a dictionary of the member names and values...
                     w.writerow({k:getattr(seller,k) for k in field_names})
@@ -124,36 +125,39 @@ class Market(Model):
     def addCusGrid(self):
         for new_customer in self.customers:
             self.grid.place_agent(new_customer,self.grid.find_empty())
-    def create_customers(self,customerTypes=None):
-        if isinstance(customerTypes,dict):
-            uid =1
-            customer_generated=0
-            for customer_type in customerTypes:
-                    type_customer = copy.copy(customerTypes[customer_type])
-                    new_customer = Customer(uid, self)
-                    new_customer.lifetime=type_customer.lifetime
-                    new_customer.preference_list=type_customer.preference_list
-                    new_customer.seller_preferencelist=type_customer.seller_preferencelist
-                    new_customer.type_name=type_customer.type_name
-                    self.grid.place_agent(new_customer,self.grid.find_empty())
-                    self.schedule.add(new_customer)
-                    self.customers.append(new_customer)
-                    uid =uid + 1
-                    customer_generated=1+customer_generated
-            self.number_of_customer = customer_generated
-        else:
-            for i in range(self.number_of_customer):
-                new_customer = Customer(i, self)
-                self.grid.place_agent(new_customer,self.grid.find_empty())
-                self.schedule.add(new_customer)
-                self.customers.append(new_customer)    
+    def addsellerGrid(self):
+        for seller in self.sellers.values():
+            self.grid.place_agent(seller,self.grid.find_empty())
+    # def create_customers(self,customerTypes=None):
+    #     if isinstance(customerTypes,dict):
+    #         uid =1
+    #         customer_generated=0
+    #         for customer_type in customerTypes:
+    #                 type_customer = copy.copy(customerTypes[customer_type])
+    #                 new_customer = Customer(uid, self)
+    #                 new_customer.lifetime=type_customer.lifetime
+    #                 new_customer.preference_list=type_customer.preference_list
+    #                 new_customer.seller_preferencelist=type_customer.seller_preferencelist
+    #                 new_customer.type_name=type_customer.type_name
+    #                 self.grid.place_agent(new_customer,self.grid.find_empty())
+    #                 self.schedule.add(new_customer)
+    #                 self.customers.append(new_customer)
+    #                 uid =uid + 1
+    #                 customer_generated=1+customer_generated
+    #         self.number_of_customer = customer_generated
+    #     else:
+    #         for i in range(self.number_of_customer):
+    #             new_customer = Customer(i, self)
+    #             self.grid.place_agent(new_customer,self.grid.find_empty())
+    #             self.schedule.add(new_customer)
+    #             self.customers.append(new_customer)
     def create_sellers(self):
-        self.sellers =[]
+        self.sellers = {}
         for i in range(self.number_of_seller):
             new_seller = Seller(i, self)
             self.grid.place_agent(new_seller,self.grid.find_empty())
             # self.schedule.add(new_seller)
-            self.sellers.append(new_seller)
+            self.sellers[i]=new_seller
     def gen_rand_productlist(self,**kwarg):
         if "price_interval" in kwarg.keys():
             price_interval= kwarg["price_interval"]
