@@ -1,5 +1,8 @@
-from PyQt5.QtWidgets import QDialog, QListWidget,QTreeWidgetItem,QTreeWidget,QLineEdit ,QWidget, QMessageBox , QVBoxLayout,QPushButton, QHBoxLayout, QApplication,QInputDialog
-from PyQt5 import QtGui,QtCore
+import csv
+
+# from PyQt5.QtWidgets import QDialog, QTreeWidgetItem,QTreeWidget,QLineEdit , QMessageBox , QVBoxLayout,QPushButton, QHBoxLayout, QApplication,QInputDialog
+from PyQt5.QtWidgets import *
+from PyQt5 import QtGui, QtCore, QtWidgets
 import sys
 # class myInputDialog(QDialog):
 #     def __init__(self, parent=None):
@@ -26,9 +29,15 @@ class TreeManage(QDialog):
         # inputdialog=InputDialog(self)
         # self.list = QListWidget()
         self.tree = QTreeWidget()
-        self.tree.setSortingEnabled(True)
+        self.tree.setSortingEnabled(False)
         self.tree.setColumnCount(2)
         self.tree.setHeaderLabels(["name","max_budget"])
+        self.tree.setDragEnabled(True)
+        self.tree.setDragDropOverwriteMode(False)
+        self.tree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        self.tree.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.tree.setRootIsDecorated(False)
+
         # self.tree.itemAt()
         if   parent_treewidget:
             for index in range(parent_treewidget.topLevelItemCount()):
@@ -47,6 +56,7 @@ class TreeManage(QDialog):
 
                         #    ("Edit", self.edit),
                            ("Remove", self.remove),
+                        ("load", self.loadfile),
                         #    ("Sort", self.sort),
                            ("Apply", self.close)):
             button= QPushButton(text)
@@ -59,6 +69,34 @@ class TreeManage(QDialog):
         self.setWindowTitle("Edit {0}  List".format(self.name))
         self.setWindowIcon(QtGui.QIcon("icon.png"))
         # self.show()
+    def loadfile(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        fileName = QtWidgets.QFileDialog.getOpenFileName(
+            self, "select proper file ")
+
+        if isinstance(fileName, tuple):
+            fileName = fileName[0]
+        else:
+            fileName = str(fileName)
+        print(fileName)
+        if fileName:
+            with open(fileName, newline='', encoding='utf-8') as f:
+                self.tree.clear()
+                self.tree.setSortingEnabled(False)
+                self.tree.setDragEnabled(True)
+                self.tree.setColumnCount(2)
+                self.tree.setHeaderLabels(["name", "max_budget"])
+                infile = csv.DictReader(f, fieldnames=["name", "budget"])
+                count = self.tree.topLevelItemCount()
+                for row in infile:
+                    m=QTreeWidgetItem(row.values())
+                    m.setFlags(
+                        QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
+                    self.tree.insertTopLevelItem(count, m)
+                    count += 1
+                    #self.tree.show()
+
 
     def add(self):
         row = self.tree.topLevelItemCount()

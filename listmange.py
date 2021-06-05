@@ -1,14 +1,23 @@
-from PyQt5.QtWidgets import QDialog, QListWidget,QLineEdit , QMessageBox , QVBoxLayout, QInputDialog,QPushButton, QHBoxLayout, QApplication
-from PyQt5 import QtGui
+import csv
+
+from PyQt5.QtWidgets import *
+from PyQt5 import QtGui, QtCore
 import sys
 class ListManage(QDialog):
     def __init__(self,name,proList = None,parent_listwidget=None):
         super(ListManage,self).__init__()
         self.name = name
         self.list = QListWidget()
+        self.list.setDragEnabled(True)
+        self.list.setDragDropOverwriteMode(False)
+        self.list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.list.setDefaultDropAction(QtCore.Qt.MoveAction)
         if  parent_listwidget:
             for index in range(parent_listwidget.count()):
-                self.list.addItem(parent_listwidget.item(index).text())
+                m=QListWidgetItem(parent_listwidget.item(index).text())
+                m.setFlags(
+                    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
+                self.list.addItem(m)
         if proList is not None:
             self.list.addItems(proList)
             self.list.setCurrentRow(0)
@@ -16,10 +25,8 @@ class ListManage(QDialog):
         vbox = QVBoxLayout()
 
         for text, slot in (("Add", self.add),
-
-                           ("Edit", self.edit),
+                           ("load", self.loadfile),
                            ("Remove", self.remove),
-                           ("Sort", self.sort),
                            ("Apply", self.close)):
             button= QPushButton(text)
             vbox.addWidget(button)
@@ -32,6 +39,31 @@ class ListManage(QDialog):
 
         self.setWindowIcon(QtGui.QIcon("icon.png"))
         # self.show()
+    def loadfile(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName = QFileDialog.getOpenFileName(
+            self, "select proper file ")
+
+        if isinstance(fileName, tuple):
+            fileName = fileName[0]
+        else:
+            fileName = str(fileName)
+        print(fileName)
+        if fileName:
+            with open(fileName, newline='', encoding='utf-8') as f:
+                self.list.clear()
+                self.list.setDragEnabled(True)
+                self.list.setDragDropOverwriteMode(False)
+                self.list.setDragDropMode(QAbstractItemView.InternalMove)
+                self.list.setDefaultDropAction(QtCore.Qt.MoveAction)
+                infile = csv.reader(f)
+                for row in infile:
+                    m = QListWidgetItem(row[0])
+                    m.setFlags(
+                        QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
+                    self.list.addItem(m)
+                    #self.tree.show()
 
     def add(self):
         row = self.list.currentRow()

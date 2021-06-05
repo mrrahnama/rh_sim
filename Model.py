@@ -44,9 +44,11 @@ class Market(Model):
                     c=CustomerType(samplecustomer=typ,typeName=typ.type_name,lambdafile="lambda.csv",contprobfile="contprob.csv")
                     c.setlambda()
                     c.setcontprob()
+                    self.customerTypesDic[typ.type_name] = c
                 else:
                     c=typ
-                self.customerTypesDic[typ.type_name]=c
+                    self.customerTypesDic[typ.typeName] = c
+
         self.transactions =[]
         self.failed_transactions=[]
         self.max_steps=max_steps

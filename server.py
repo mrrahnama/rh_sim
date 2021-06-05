@@ -6,12 +6,12 @@ import sys
 import csv
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QTreeWidgetItem
+from PyQt5.QtWidgets import QTreeWidgetItem ,QListWidgetItem
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import CanvasGrid, ChartModule
 import numpy as np
 from Model import Market, Seller, Customer, CustomerType,Product
-from UI.simui_2_4 import Ui_MainWindow
+from UI.simui3_1 import Ui_MainWindow
 from listmange import ListManage
 from treamanage import TreeManage
 
@@ -107,10 +107,10 @@ class SetupGui():
             lambda: self.newpreferencelist("seller"))
         self.ui.checkbox_batchsimulation.stateChanged.connect(lambda: self.state_changed(
             self.ui.checkbox_batchsimulation, self.ui.lineEdit_simNo))
-        self.ui.checkBox_sellerlistfile.stateChanged.connect(lambda: self.state_changed(
-            self.ui.checkBox_sellerlistfile, self.ui.button_seller_listfile))
-        self.ui.checkBox_productlistfile.stateChanged.connect(lambda: self.state_changed(
-            self.ui.checkBox_productlistfile, self.ui.button_product_listfile))
+        # self.ui.checkBox_sellerlistfile.stateChanged.connect(lambda: self.state_changed(
+        #     self.ui.checkBox_sellerlistfile, self.ui.button_seller_listfile))
+        # self.ui.checkBox_productlistfile.stateChanged.connect(lambda: self.state_changed(
+        #     self.ui.checkBox_productlistfile, self.ui.button_product_listfile))
         self.ListManagedialog.accepted.connect(self.closelistdialog)
         self.ui.actionExit.triggered.connect(self.close_GUI)
         self.ui.actionExit.setShortcut("ctrl+Q")
@@ -119,10 +119,10 @@ class SetupGui():
         # self.ui.button_Run.clicked.connect(self.thread.start)
         self.ui.button_Run.clicked.connect(self.run)
         self.ui.pushButton_reportaddress.clicked.connect(self.saveFileDialog)
-        self.ui.button_product_listfile.clicked.connect(
-            lambda: self.openFileDialog(self.ui.lineEdit_productlistfile))
-        self.ui.button_seller_listfile.clicked.connect(
-            lambda: self.openFileDialog(self.ui.lineEdit_sellerfile))
+        # self.ui.button_product_listfile.clicked.connect(
+        #     lambda: self.openFileDialog(self.ui.lineEdit_productlistfile))
+        # self.ui.button_seller_listfile.clicked.connect(
+        #     lambda: self.openFileDialog(self.ui.lineEdit_sellerfile))
 
     def saveFileDialog(self):
         options = QtWidgets.QFileDialog.Options()
@@ -215,10 +215,11 @@ class SetupGui():
         elif name == "seller":
             self.ui.listWidget_sellerpreferencelist.clear()
             for index in range(self.ListManagedialog.list.count()):
-                self.ui.listWidget_sellerpreferencelist.addItem(
-                    self.ListManagedialog.list.item(index).text())
-            self.ui.listWidget_sellerpreferencelist.openPersistentEditor(
-                self.ui.listWidget_sellerpreferencelist.item(0))
+                m = QListWidgetItem( self.ListManagedialog.list.item(index).text())
+                m.setFlags(
+                    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
+                self.ui.listWidget_sellerpreferencelist.addItem(m)
+
         print("close dialoag")
 
     def saveCustomerType(self):
@@ -382,6 +383,10 @@ class MarketSimulation():
                 infile = csv.DictReader(f,fieldnames=["name", "minvalue", "count"])
                 for row in infile:
                     inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),available=row["count"])
+        elif isinstance(products,dict):
+            for row in products:
+                inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),
+                                                 available=row["count"])
         return inventory
 
     def add_seller(self,seller):
@@ -488,8 +493,10 @@ if __name__ == "__main__":
         sim.report_path="C:/SSD/Uni/Thesis/Source/main/simulator/reports/"
 
         # sim.create_customer_type('poorcus',1,)
-        sim.customer_types=load3testcustomertype()
-
+        # sim.customer_types=load3testcustomertype()
+        sim.add_customer_type(sim.create_customer_type("poortype",1,{"p1":300,"p3":390,"p2":320},10,0.6))
+        sim.add_customer_type(sim.create_customer_type("normaltype",1,{"p3":400,"p2":350,"p1":300},40,0.5))
+        sim.add_customer_type(sim.create_customer_type("richtype",1,{"p4":800,"p3":800},5,0.2))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory1.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory2.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory3.csv")))
