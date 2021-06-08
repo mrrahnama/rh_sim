@@ -17,7 +17,7 @@
    <widget class="QTabWidget" name="tabWidget">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>10</x>
       <y>0</y>
       <width>971</width>
       <height>571</height>
@@ -30,7 +30,7 @@
      <enum>QTabWidget::Triangular</enum>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -590,30 +590,17 @@
             <widget class="QLineEdit" name="lineEdit_lambdafixval">
              <property name="geometry">
               <rect>
-               <x>150</x>
+               <x>160</x>
                <y>30</y>
                <width>91</width>
                <height>20</height>
               </rect>
              </property>
             </widget>
-            <widget class="QRadioButton" name="radioButton_lamdafixed">
+            <widget class="QLabel" name="label_18">
              <property name="geometry">
               <rect>
-               <x>5</x>
-               <y>0</y>
-               <width>99</width>
-               <height>17</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>fixed </string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_9">
-             <property name="geometry">
-              <rect>
-               <x>20</x>
+               <x>30</x>
                <y>20</y>
                <width>111</width>
                <height>31</height>
@@ -623,54 +610,24 @@
               <string>population per step</string>
              </property>
             </widget>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_2">
-            <property name="title">
-             <string/>
-            </property>
-            <widget class="QLineEdit" name="lineEdit_lambdafile">
+            <widget class="QRadioButton" name="radioButton_lamdafixed">
              <property name="geometry">
               <rect>
-               <x>60</x>
-               <y>30</y>
-               <width>261</width>
-               <height>20</height>
-              </rect>
-             </property>
-            </widget>
-            <widget class="QRadioButton" name="radioButton_lamdafile">
-             <property name="geometry">
-              <rect>
-               <x>6</x>
-               <y>0</y>
+               <x>10</x>
+               <y>10</y>
                <width>99</width>
                <height>17</height>
               </rect>
              </property>
              <property name="text">
-              <string>lambda from file</string>
-             </property>
-            </widget>
-            <widget class="QLabel" name="label_12">
-             <property name="geometry">
-              <rect>
-               <x>8</x>
-               <y>20</y>
-               <width>111</width>
-               <height>31</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>file path:</string>
+              <string>fixed </string>
              </property>
             </widget>
             <widget class="QPushButton" name="button_lamdafile">
              <property name="geometry">
               <rect>
-               <x>326</x>
-               <y>28</y>
+               <x>330</x>
+               <y>90</y>
                <width>21</width>
                <height>21</height>
               </rect>
@@ -679,47 +636,76 @@
               <string>...</string>
              </property>
             </widget>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_3">
-            <property name="title">
-             <string/>
-            </property>
-            <widget class="QLineEdit" name="lineEdit_lambdapoly">
+            <widget class="QRadioButton" name="radioButton_lamdafile">
              <property name="geometry">
               <rect>
-               <x>150</x>
-               <y>20</y>
-               <width>211</width>
-               <height>31</height>
-              </rect>
-             </property>
-            </widget>
-            <widget class="QRadioButton" name="radioButton_polylamda">
-             <property name="geometry">
-              <rect>
-               <x>9</x>
-               <y>0</y>
+               <x>10</x>
+               <y>62</y>
                <width>99</width>
                <height>17</height>
               </rect>
              </property>
              <property name="text">
-              <string>polynomial </string>
+              <string>lambda from file</string>
              </property>
             </widget>
-            <widget class="QLabel" name="label_13">
+            <widget class="QLineEdit" name="lineEdit_lambdafile">
              <property name="geometry">
               <rect>
-               <x>20</x>
-               <y>20</y>
+               <x>64</x>
+               <y>92</y>
+               <width>261</width>
+               <height>20</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_17">
+             <property name="geometry">
+              <rect>
+               <x>12</x>
+               <y>82</y>
+               <width>111</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>file path:</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="lineEdit_lambdapoly">
+             <property name="geometry">
+              <rect>
+               <x>151</x>
+               <y>150</y>
+               <width>211</width>
+               <height>31</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_16">
+             <property name="geometry">
+              <rect>
+               <x>21</x>
+               <y>150</y>
                <width>131</width>
                <height>31</height>
               </rect>
              </property>
              <property name="text">
               <string>lambda per step(x)=</string>
+             </property>
+            </widget>
+            <widget class="QRadioButton" name="radioButton_polylamda">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>130</y>
+               <width>99</width>
+               <height>17</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>polynomial </string>
              </property>
             </widget>
            </widget>
@@ -749,7 +735,7 @@
             <widget class="QRadioButton" name="radioButton_probabilityfixed">
              <property name="geometry">
               <rect>
-               <x>5</x>
+               <x>10</x>
                <y>0</y>
                <width>99</width>
                <height>17</height>
@@ -772,28 +758,11 @@
               <string>probability to continiue</string>
              </property>
             </widget>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_14">
-            <property name="title">
-             <string/>
-            </property>
-            <widget class="QLineEdit" name="lineEdit_probfile">
-             <property name="geometry">
-              <rect>
-               <x>60</x>
-               <y>30</y>
-               <width>261</width>
-               <height>31</height>
-              </rect>
-             </property>
-            </widget>
             <widget class="QRadioButton" name="radioButton_probabilityfile">
              <property name="geometry">
               <rect>
-               <x>6</x>
-               <y>0</y>
+               <x>8</x>
+               <y>60</y>
                <width>151</width>
                <height>17</height>
               </rect>
@@ -802,11 +771,21 @@
               <string>probability  from file</string>
              </property>
             </widget>
+            <widget class="QLineEdit" name="lineEdit_probfile">
+             <property name="geometry">
+              <rect>
+               <x>62</x>
+               <y>90</y>
+               <width>261</width>
+               <height>31</height>
+              </rect>
+             </property>
+            </widget>
             <widget class="QLabel" name="label_72">
              <property name="geometry">
               <rect>
-               <x>8</x>
-               <y>20</y>
+               <x>10</x>
+               <y>80</y>
                <width>111</width>
                <height>31</height>
               </rect>
@@ -815,41 +794,34 @@
               <string>file path:</string>
              </property>
             </widget>
-            <widget class="QPushButton" name="button_probfile">
-             <property name="geometry">
-              <rect>
-               <x>326</x>
-               <y>28</y>
-               <width>21</width>
-               <height>21</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>...</string>
-             </property>
-            </widget>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_15">
-            <property name="title">
-             <string/>
-            </property>
             <widget class="QLineEdit" name="lineEdit_probpoly">
              <property name="geometry">
               <rect>
-               <x>150</x>
-               <y>20</y>
+               <x>151</x>
+               <y>150</y>
                <width>211</width>
                <height>31</height>
               </rect>
              </property>
             </widget>
+            <widget class="QLabel" name="label_73">
+             <property name="geometry">
+              <rect>
+               <x>21</x>
+               <y>150</y>
+               <width>131</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>probability per try(x)=</string>
+             </property>
+            </widget>
             <widget class="QRadioButton" name="radioButton_probabilitypoly">
              <property name="geometry">
               <rect>
-               <x>9</x>
-               <y>0</y>
+               <x>10</x>
+               <y>130</y>
                <width>99</width>
                <height>17</height>
               </rect>
@@ -858,17 +830,17 @@
               <string>polynomial </string>
              </property>
             </widget>
-            <widget class="QLabel" name="label_73">
+            <widget class="QPushButton" name="button_probfile">
              <property name="geometry">
               <rect>
-               <x>20</x>
-               <y>20</y>
-               <width>131</width>
-               <height>31</height>
+               <x>330</x>
+               <y>90</y>
+               <width>21</width>
+               <height>21</height>
               </rect>
              </property>
              <property name="text">
-              <string>probability per try(x)=</string>
+              <string>...</string>
              </property>
             </widget>
            </widget>
@@ -1126,7 +1098,7 @@
        <string>+</string>
       </property>
      </widget>
-     <widget class="QTreeWidget" name="treeWidget_productpreference_2">
+     <widget class="QTreeWidget" name="treeWidget_inventory">
       <property name="geometry">
        <rect>
         <x>500</x>
@@ -1231,7 +1203,7 @@
          <property name="title">
           <string/>
          </property>
-         <widget class="QLineEdit" name="lineEdit_probpoly_2">
+         <widget class="QLineEdit" name="lineEdit_strategypoly">
           <property name="geometry">
            <rect>
             <x>30</x>
@@ -1279,7 +1251,7 @@
           <property name="title">
            <string/>
           </property>
-          <widget class="QLineEdit" name="lineEdit_probfile_2">
+          <widget class="QLineEdit" name="lineEdit_stratefyfile">
            <property name="geometry">
             <rect>
              <x>60</x>
@@ -1315,7 +1287,7 @@
             <string>file path:</string>
            </property>
           </widget>
-          <widget class="QPushButton" name="button_probfile_2">
+          <widget class="QPushButton" name="button_strategyfile">
            <property name="geometry">
             <rect>
              <x>326</x>
@@ -1342,7 +1314,7 @@
      <x>0</x>
      <y>0</y>
      <width>981</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1392,5 +1364,22 @@
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>radioButton_lamdafixed</sender>
+   <signal>clicked()</signal>
+   <receiver>lineEdit_lambdafixval</receiver>
+   <slot>redo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>76</x>
+     <y>287</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>238</x>
+     <y>313</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

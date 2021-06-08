@@ -23,15 +23,19 @@ import sys
     # def getInputs(self):
     #     return [self.first.text(), self.second.text()]
 class TreeManage(QDialog):
-    def __init__(self,name,proList = None,parent_treewidget=None):
+    def __init__(self,name,proList = None,parent_treewidget=None,columns=2):
         super(TreeManage,self).__init__()
         self.name = name
+        self.columns=columns
         # inputdialog=InputDialog(self)
         # self.list = QListWidget()
         self.tree = QTreeWidget()
         self.tree.setSortingEnabled(False)
-        self.tree.setColumnCount(2)
-        self.tree.setHeaderLabels(["name","max_budget"])
+        self.tree.setColumnCount(self.columns)
+        if self.columns == 2:
+            self.tree.setHeaderLabels(["name","max_budget"])
+        elif self.columns == 3:
+            self.tree.setHeaderLabels(["product name", "min price", "count"])
         self.tree.setDragEnabled(True)
         self.tree.setDragDropOverwriteMode(False)
         self.tree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
@@ -39,7 +43,7 @@ class TreeManage(QDialog):
         self.tree.setRootIsDecorated(False)
 
         # self.tree.itemAt()
-        if   parent_treewidget:
+        if parent_treewidget:
             for index in range(parent_treewidget.topLevelItemCount()):
                 m=parent_treewidget.topLevelItem(index).clone()
                 # print(m.text(0))
@@ -85,9 +89,14 @@ class TreeManage(QDialog):
                 self.tree.clear()
                 self.tree.setSortingEnabled(False)
                 self.tree.setDragEnabled(True)
-                self.tree.setColumnCount(2)
-                self.tree.setHeaderLabels(["name", "max_budget"])
-                infile = csv.DictReader(f, fieldnames=["name", "budget"])
+                self.tree.setColumnCount(self.columns)
+                if self.columns == 2:
+                    self.tree.setHeaderLabels(["name", "max_budget"])
+                    infile = csv.DictReader(f, fieldnames=["name", "budget"])
+                elif self.columns == 3:
+                    self.tree.setHeaderLabels(["product name", "min price", "count"])
+                    infile = csv.DictReader(f, fieldnames=["productname", "minprice", "count"])
+
                 count = self.tree.topLevelItemCount()
                 for row in infile:
                     m=QTreeWidgetItem(row.values())

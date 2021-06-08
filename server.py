@@ -6,11 +6,11 @@ import sys
 import csv
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QTreeWidgetItem ,QListWidgetItem
+from PyQt5.QtWidgets import QTreeWidgetItem, QListWidgetItem
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import CanvasGrid, ChartModule
 import numpy as np
-from Model import Market, Seller, Customer, CustomerType,Product
+from Model import Market, Seller, Customer, CustomerType, Product
 from UI.simui3_1 import Ui_MainWindow
 from listmange import ListManage
 from treamanage import TreeManage
@@ -37,8 +37,6 @@ def market_portrayal(agent):
         portrayal["scale"] = 0.6
         portrayal["Layer"] = 1
     return portrayal
-
-
 
 
 class RunThread(QtCore.QThread):
@@ -86,12 +84,15 @@ class SetupGui():
             "seller", [], self.ui.listWidget_sellerpreferencelist)
         self.treemanagedialog = TreeManage(
             "product", [], self.ui.treeWidget_productpreference)
+        self.treemanagedialoginventory = TreeManage(
+            "inventory", [], self.ui.treeWidget_inventory, columns=3)
         # self.run()
         self.updatewidgets()
         self.widgetactions()
         self.MainWindow.show()
         self.customerTypes = {}
         self.sellerTypes = {}
+        self.simobj=MarketSimulation()
         # self.thread.start()
         sys.exit(app.exec_())
 
@@ -105,6 +106,8 @@ class SetupGui():
             lambda: self.newpreferencelist("product"))
         self.ui.button_seller_preferencelist.clicked.connect(
             lambda: self.newpreferencelist("seller"))
+        self.ui.button_inventory.clicked.connect(
+            lambda: self.newpreferencelist("inventory"))
         self.ui.checkbox_batchsimulation.stateChanged.connect(lambda: self.state_changed(
             self.ui.checkbox_batchsimulation, self.ui.lineEdit_simNo))
         # self.ui.checkBox_sellerlistfile.stateChanged.connect(lambda: self.state_changed(
@@ -118,12 +121,34 @@ class SetupGui():
         self.ui.button_loadcustomertype.clicked.connect(self.load_customerType)
         # self.ui.button_Run.clicked.connect(self.thread.start)
         self.ui.button_Run.clicked.connect(self.run)
-        self.ui.pushButton_reportaddress.clicked.connect(self.saveFileDialog)
+        self.ui.pushButton_reportaddress.clicked.connect(lambda: self.openFileDialog(self.ui.lineEdit_reportAddress))
+        self.ui.button_lamdafile.clicked.connect(lambda: self.openFileDialog(self.ui.lineEdit_lambdafile))
+        self.ui.button_probfile.clicked.connect(lambda: self.openFileDialog(self.ui.lineEdit_probfile))
+        self.ui.button_strategyfile.clicked.connect(lambda: self.openFileDialog(self.ui.lineEdit_stratefyfile))
         # self.ui.button_product_listfile.clicked.connect(
         #     lambda: self.openFileDialog(self.ui.lineEdit_productlistfile))
         # self.ui.button_seller_listfile.clicked.connect(
         #     lambda: self.openFileDialog(self.ui.lineEdit_sellerfile))
-
+        self.ui.lineEdit_probfile.setDisabled(self.ui.radioButton_probabilityfile.isChecked() is not True)
+        self.ui.radioButton_probabilityfile.toggled.connect(
+            lambda: self.ui.lineEdit_probfile.setDisabled(self.ui.radioButton_probabilityfile.isChecked() is not True))
+        self.ui.lineEdit_probfixval.setDisabled(self.ui.radioButton_probabilityfixed.isChecked() is not True)
+        self.ui.radioButton_probabilityfixed.toggled.connect(
+            lambda: self.ui.lineEdit_probfixval.setDisabled(self.ui.radioButton_probabilityfixed.isChecked() is not True))
+        self.ui.lineEdit_probpoly.setDisabled(self.ui.radioButton_probabilitypoly.isChecked() is not True)
+        self.ui.radioButton_probabilitypoly.toggled.connect(
+            lambda: self.ui.lineEdit_probpoly.setDisabled(self.ui.radioButton_probabilitypoly.isChecked() is not True))
+        self.ui.lineEdit_lambdafile.setDisabled(self.ui.radioButton_lamdafile.isChecked() is not True)
+        self.ui.radioButton_lamdafile.toggled.connect(
+            lambda: self.ui.lineEdit_lambdafile.setDisabled(self.ui.radioButton_lamdafile.isChecked() is not True))
+        self.ui.lineEdit_lambdafixval.setDisabled(self.ui.radioButton_lamdafixed.isChecked() is not True)
+        self.ui.radioButton_lamdafixed.toggled.connect(
+            lambda: self.ui.lineEdit_lambdafixval.setDisabled(self.ui.radioButton_lamdafixed.isChecked() is not True))
+        self.ui.lineEdit_lambdapoly.setDisabled(self.ui.radioButton_polylamda.isChecked() is not True)
+        self.ui.radioButton_polylamda.toggled.connect(
+            lambda: self.ui.lineEdit_lambdapoly.setDisabled(self.ui.radioButton_polylamda.isChecked() is not True))
+        # self.ui.radioButton_probabilityfile.toggled.connect(lambda : print("toggled"))
+        self.ui.comboBox_customertypes.activated[str].connect(lambda text : self.load_customerType(text))
     def saveFileDialog(self):
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
@@ -131,8 +156,7 @@ class SetupGui():
             self.MainWindow, "Set reports address")
         if fileName:
             fileName = fileName + "/"
-            self.ui.lineEdit_reportAddress.setText(fileName)
-            print(fileName)
+            return fileName
 
     def openFileDialog(self, target_lineedit):
         options = QtWidgets.QFileDialog.Options()
@@ -156,6 +180,7 @@ class SetupGui():
         simulatin_max_days = int(self.ui.lineEdit_simdays.text())
         # simulation_batch_run = self.ui.checkbox_batchsimulation.isChecked()
         # batch_run_number=int(self.ui.lineEdit_simNo.text())
+
         self.load3testcustomertype()
         self.model_param = {
             "height": height,
@@ -186,12 +211,19 @@ class SetupGui():
     def newpreferencelist(self, name):
         self.ListManagedialog = None
         self.treemanagedialog = None
+        self.treemanagedialoginventory = None
         if name == "product":
             self.treemanagedialog = TreeManage(
                 name, None, parent_treewidget=self.ui.treeWidget_productpreference)
             self.treemanagedialog.accepted.connect(
                 lambda: self.closelistdialog("product"))
             self.treemanagedialog.exec_()
+        if name == "inventory":
+            self.treemanagedialoginventory = TreeManage(
+                name, None, parent_treewidget=self.ui.treeWidget_inventory, columns=3)
+            self.treemanagedialoginventory.accepted.connect(
+                lambda: self.closelistdialog("inventory"))
+            self.treemanagedialoginventory.exec_()
             # self.treemanagedialog.show()
 
         elif name == "seller":
@@ -211,16 +243,24 @@ class SetupGui():
                            QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
                 self.ui.treeWidget_productpreference.insertTopLevelItem(
                     index, m)
-
+        elif name == "inventory":
+            self.ui.treeWidget_inventory.clear()
+            for index in range(self.treemanagedialoginventory.tree.topLevelItemCount()):
+                m = self.treemanagedialoginventory.tree.topLevelItem(index).clone()
+                # print(m.text(0))
+                m.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled |
+                           QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
+                self.ui.treeWidget_inventory.insertTopLevelItem(
+                    index, m)
         elif name == "seller":
             self.ui.listWidget_sellerpreferencelist.clear()
             for index in range(self.ListManagedialog.list.count()):
-                m = QListWidgetItem( self.ListManagedialog.list.item(index).text())
+                m = QListWidgetItem(self.ListManagedialog.list.item(index).text())
                 m.setFlags(
                     QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsEditable)
                 self.ui.listWidget_sellerpreferencelist.addItem(m)
 
-        print("close dialoag")
+        print("close dialog")
 
     def saveCustomerType(self):
         seller_preferenceList = [str(self.ui.listWidget_sellerpreferencelist.item(
@@ -247,29 +287,31 @@ class SetupGui():
         # print(product_preferencelist )
         # print(sellerpreferenceList)
 
-    def load_customerType(self):
-        options = QtWidgets.QFileDialog.Options()
-        options |= QtWidgets.QFileDialog.DontUseNativeDialog
-        fileName = QtWidgets.QFileDialog.getOpenFileName(
-            self.MainWindow, "select proper file ")
-        if isinstance(fileName, tuple):
-            fileName = fileName[0]
-        else:
-            fileName = str(fileName)
-        print(fileName)
-        with open(fileName, 'rb') as filehandler:
-            user_customer = pickle.load(filehandler)
-            self.fill_preferencelist(user_customer.preference_list)
-            self.fill_sellerpreferencelist(user_customer.seller_preferencelist)
-            self.ui.comboBox_customertypes.addItem(user_customer.type_name)
-            self.ui.comboBox_customertypes.setCurrentText(
-                user_customer.type_name)
-            self.ui.lineEdit_lifetime.setText(str(user_customer.lifetime))
-            self.ui.lineEdit_percentofall.setText(
-                str(user_customer.percentofall))
-            self.customerTypes[user_customer.type_name] = user_customer
-
-            print(user_customer.__dict__)
+    def load_customerType(self,text=None):
+        if text is not None:
+            options = QtWidgets.QFileDialog.Options()
+            options |= QtWidgets.QFileDialog.DontUseNativeDialog
+            fileName = QtWidgets.QFileDialog.getOpenFileName(
+                self.MainWindow, "select proper file ")
+            if isinstance(fileName, tuple):
+                fileName = fileName[0]
+            else:
+                fileName = str(fileName)
+            print(fileName)
+            with open(fileName, 'rb') as filehandler:
+                user_customer = pickle.load(filehandler)
+        elif isinstance(self.customerTypes[text], CustomerType):
+            user_customer=self.customerTypes[text]
+        self.fill_preferencelist(user_customer.preference_list)
+        self.fill_sellerpreferencelist(user_customer.seller_preferencelist)
+        self.ui.comboBox_customertypes.addItem(user_customer.type_name)
+        self.ui.comboBox_customertypes.setCurrentText(
+            user_customer.type_name)
+        self.ui.lineEdit_lifetime.setText(str(user_customer.lifetime))
+        self.ui.lineEdit_percentofall.setText(
+            str(user_customer.percentofall))
+        self.customerTypes[user_customer.type_name] = user_customer
+        print(user_customer.__dict__)
 
     def load3testcustomertype(self):
         # c = CustomerType(samplecustomer=typ, typeName=typ.type_name, lambdafile="lambda.csv",
@@ -304,8 +346,9 @@ class SetupGui():
     def batchmodesetup(self):
         pass
 
+
 def load3testcustomertype():
-    custypes={}
+    custypes = {}
     with open("customertypes/customer_type_customerpoor.txt", 'rb') as filehandler:
         custypes["customerpoor"] = pickle.load(filehandler)
     with open("customertypes/customer_type_customerrich.txt", 'rb') as filehandler:
@@ -314,44 +357,46 @@ def load3testcustomertype():
         custypes["customernormal"] = pickle.load(filehandler)
     return custypes
 
+
 class MarketSimulation():
     def __init__(self):
-        self.customer_types={}
-        self.seller_list={}
-        self.product_list={}
-        self.custome_scheduler=None
-        self.simulation_time=0
-        self.grid_size=20
-    #customer
+        self.customer_types = {}
+        self.seller_list = {}
+        self.product_list = {}
+        self.custome_scheduler = None
+        self.simulation_time = 0
+        self.grid_size = 20
+
+    # customer
 
     def add_customer_type(self, customer_type):
-        if isinstance(customer_type,CustomerType):
+        if isinstance(customer_type, CustomerType):
             self.customer_types[customer_type.typeName] = customer_type
 
-    def remove_customer_type(self,customer_type):
-        if isinstance(customer_type,str):
+    def remove_customer_type(self, customer_type):
+        if isinstance(customer_type, str):
             self.customer_types.pop(customer_type)
-        elif isinstance(customer_type,CustomerType):
+        elif isinstance(customer_type, CustomerType):
             self.customer_types.pop(customer_type.typeName)
 
-    def create_customer_type(self,name ,lifetime , preferenclist, generationlambda, forcebuyprob ):
-        samplecus = Customer(1,Market(),None,lifetime=lifetime)
-        samplecus.preference_list=preferenclist
-        samplecus.type_name=name
-        samplecus.ignorShopping=forcebuyprob
+    def create_customer_type(self, name, lifetime, preferenclist, generationlambda, forcebuyprob):
+        samplecus = Customer(1, Market(), None, lifetime=lifetime)
+        samplecus.preference_list = preferenclist
+        samplecus.type_name = name
+        samplecus.ignorShopping = forcebuyprob
         custyp = CustomerType(samplecustomer=samplecus)
         if callable(generationlambda):
             print("use custom function generation ratio")
-            custyp.getLambda=generationlambda
-        elif isinstance(generationlambda,str):
+            custyp.getLambda = generationlambda
+        elif isinstance(generationlambda, str):
             print("use filepath for generation ratio")
             custyp.setlambda(generationlambda)
-        elif isinstance(generationlambda,int):
+        elif isinstance(generationlambda, int):
             print("use fix generation ratio")
-            custyp.getLambda=lambda step: generationlambda
-        elif isinstance(generationlambda,list):
+            custyp.getLambda = lambda step: generationlambda
+        elif isinstance(generationlambda, list):
             print("use polynomial generation ratio")
-            custyp.getLambda=lambda step:np.polyval(generationlambda,step)
+            custyp.getLambda = lambda step: np.polyval(generationlambda, step)
         if callable(forcebuyprob):
             print("use custom function generation ratio")
             custyp.getcontprob = forcebuyprob
@@ -364,69 +409,71 @@ class MarketSimulation():
         elif isinstance(forcebuyprob, list):
             print("use polynomial generation ratio")
             custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, tryNo)
-        return  custyp
+        return custyp
 
-    #seller
+    # seller
 
-    def create_seller(self,strategy=None,inventory=None):
-        seller = Seller(len(self.seller_list),Market())
-        seller.inventory=inventory
+    def create_seller(self, strategy=None, inventory=None):
+        seller = Seller(len(self.seller_list), Market())
+        seller.inventory = inventory
         if strategy is not None:
-            seller.strategy=strategy
+            seller.strategy = strategy
         seller.inventory_available()
         return seller
 
-    def create_inventory(self,products):
-        inventory={}
-        if isinstance(products,str):
+    def create_inventory(self, products):
+        inventory = {}
+        if isinstance(products, str):
             with open(products, newline='', encoding='utf-8') as f:
-                infile = csv.DictReader(f,fieldnames=["name", "minvalue", "count"])
+                infile = csv.DictReader(f, fieldnames=["name", "minvalue", "count"])
                 for row in infile:
-                    inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),available=row["count"])
-        elif isinstance(products,dict):
+                    inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),
+                                                     available=row["count"])
+        elif isinstance(products, dict):
             for row in products:
                 inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),
                                                  available=row["count"])
         return inventory
 
-    def add_seller(self,seller):
-        if isinstance(seller,Seller):
-            self.seller_list[seller.unique_id]=seller
+    def add_seller(self, seller):
+        if isinstance(seller, Seller):
+            self.seller_list[seller.unique_id] = seller
 
-    def remove_seller(self,seller):
+    def remove_seller(self, seller):
         if isinstance(seller, int):
             self.seller_list.pop(seller)
         elif isinstance(seller, Seller):
             self.seller_list.pop(seller.unique_id)
 
-    def set_product_list(self,p_list):
-        if(isinstance(p_list,dict)):
-            self.product_list=p_list
-        elif(isinstance(p_list,str)):
-            self.product_list=self.readproductfile(p_list)
+    def set_product_list(self, p_list):
+        if (isinstance(p_list, dict)):
+            self.product_list = p_list
+        elif (isinstance(p_list, str)):
+            self.product_list = self.readproductfile(p_list)
 
-    def readproductfile(self,filepath):
-        d={}
+    def readproductfile(self, filepath):
+        d = {}
         with open(filepath, newline='', encoding='utf-8') as f:
             infile = csv.reader(f)
             d = dict(filter(None, infile))
         return d
 
-    def set_strategy(self,sellerid,strategy):
+    def set_strategy(self, sellerid, strategy):
         if hasattr(strategy, "__call__"):
-            self.seller_list[sellerid].strategy=strategy
-    #model
+            self.seller_list[sellerid].strategy = strategy
 
-    def set_max_days(self,simul_time):
-        self.simulation_time=simul_time
+    # model
 
-    def set_callerscheduler(self,schedulfunction):
+    def set_max_days(self, simul_time):
+        self.simulation_time = simul_time
+
+    def set_callerscheduler(self, schedulfunction):
         self.custome_scheduler = schedulfunction
 
-    def set_market_capacity(self,gridsize):
-        self.grid_size=gridsize
+    def set_market_capacity(self, gridsize):
+        self.grid_size = gridsize
 
-    #server
+    # server
 
     def run(self):
         print("server is running ...")
@@ -434,7 +481,7 @@ class MarketSimulation():
 
         height = self.grid_size
         width = height
-        #self.load3testcustomertype()
+        # self.load3testcustomertype()
         self.model_param = {
             "height": height,
             "width": width,
@@ -455,8 +502,6 @@ class MarketSimulation():
         # self.server.signalobj.closesignal.connect(self.stop)
         self.server.launch()  # emit new Signal with value
 
-
-
     def setup_gui(self):
         sim = SetupGui()
 
@@ -465,12 +510,13 @@ class MarketSimulation():
 
     def batch_run(self):
         pass
-#reports
-    def set_report_path(self,dirPath):
-        self.report_path=dirPath
 
-    def set_how_report(self,report_type="minimal"):
-        if report_type in ["all","minimal","seller","periodic transaction"]:
+    # reports
+    def set_report_path(self, dirPath):
+        self.report_path = dirPath
+
+    def set_how_report(self, report_type="minimal"):
+        if report_type in ["all", "minimal", "seller", "periodic transaction"]:
             self.reports = report_type
         else:
             print('report option should be in "all","minimal","seller","periodic transaction" ')
@@ -482,30 +528,29 @@ if __name__ == "__main__":
     print("2 --> visual run ")
     print("3 --> single run console")
     print("4 --> batch mode run")
-    mode =int( input())
+    mode = int(input())
     sim = MarketSimulation()
-    if mode==1:
+    if mode == 1:
         sim.setup_gui()
-    if mode==2:
-
+    if mode == 2:
         sim.set_market_capacity(20)
         sim.set_max_days(30)
-        sim.report_path="C:/SSD/Uni/Thesis/Source/main/simulator/reports/"
+        sim.report_path = "C:/SSD/Uni/Thesis/Source/main/simulator/reports/"
 
         # sim.create_customer_type('poorcus',1,)
         # sim.customer_types=load3testcustomertype()
-        sim.add_customer_type(sim.create_customer_type("poortype",1,{"p1":300,"p3":390,"p2":320},10,0.6))
-        sim.add_customer_type(sim.create_customer_type("normaltype",1,{"p3":400,"p2":350,"p1":300},40,0.5))
-        sim.add_customer_type(sim.create_customer_type("richtype",1,{"p4":800,"p3":800},5,0.2))
+        sim.add_customer_type(sim.create_customer_type("poortype", 1, {"p1": 300, "p3": 390, "p2": 320}, 10, 0.6))
+        sim.add_customer_type(sim.create_customer_type("normaltype", 1, {"p3": 400, "p2": 350, "p1": 300}, 40, 0.5))
+        sim.add_customer_type(sim.create_customer_type("richtype", 1, {"p4": 800, "p3": 800}, 5, 0.2))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory1.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory2.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory3.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory3.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory1.csv")))
         sim.run()
-    if mode==3:
+    if mode == 3:
         sim.console_run();
-    if mode==4:
+    if mode == 4:
         sim.batch_run();
 
 # server = ModularServer(Market, [canvas,chart_count], name="Market simulation")
