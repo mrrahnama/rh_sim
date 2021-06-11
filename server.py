@@ -11,7 +11,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import CanvasGrid, ChartModule
 import numpy as np
 from Model import Market, Seller, Customer, CustomerType, Product
-from UI.simui3_1 import Ui_MainWindow
+from UI.simui_3_4 import Ui_MainWindow
 from listmange import ListManage
 from treamanage import TreeManage
 
@@ -87,6 +87,7 @@ class SetupGui():
         self.treemanagedialoginventory = TreeManage(
             "inventory", [], self.ui.treeWidget_inventory, columns=3)
         # self.run()
+        self.lastcustomertype = ""
         self.updatewidgets()
         self.widgetactions()
         self.MainWindow.show()
@@ -100,6 +101,8 @@ class SetupGui():
         scriptDir = os.path.dirname(os.path.realpath(__file__))
         self.MainWindow.setWindowIcon(
             QtGui.QIcon(scriptDir + r"\UI\icon\title.png"))
+        self.ui.comboBox_customertypes.addItem("<new>")
+        self.ui.Button_newcustomer.hide()
 
     def widgetactions(self):
         self.ui.button_pr_preferencelist.clicked.connect(
@@ -148,7 +151,11 @@ class SetupGui():
         self.ui.radioButton_polylamda.toggled.connect(
             lambda: self.ui.lineEdit_lambdapoly.setDisabled(self.ui.radioButton_polylamda.isChecked() is not True))
         # self.ui.radioButton_probabilityfile.toggled.connect(lambda : print("toggled"))
-        self.ui.comboBox_customertypes.activated[str].connect(lambda text : self.load_customerType(text))
+        self.ui.comboBox_customertypes.textActivated.connect(self.setCustomerType)
+        # self.ui.comboBox_customertypes.currentTextChanged[str].connect(self.setCustomerType)
+        self.ui.Button_newcustomer.clicked.connect(self.newcustomerType)
+        self.ui.button_removecusType.clicked.connect(self.removecustomerType)
+
     def saveFileDialog(self):
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
@@ -185,16 +192,28 @@ class SetupGui():
         self.model_param = {
             "height": height,
             "width": width,
-            "sellers": int(self.ui.lineEdit_sellerNo.text()),
+            "sellers": self.sellerTypes if len(self.sellerTypes) > 0 else int(self.ui.lineEdit_sellerNo.text()),
             "report_address": self.ui.lineEdit_reportAddress.text(),
             "max_steps": simulatin_max_days,
             "customerTypes": self.customerTypes,
         }
+        #self.model_param = {
+        #     "height": height,
+        #     "width": width,
+        #     "sellers": int(self.ui.lineEdit_sellerNo.text()),
+        #     "report_address": self.ui.lineEdit_reportAddress.text(),
+        #     "max_steps": simulatin_max_days,
+        #     "customerTypes": self.customerTypes,
+        # }
         self.thread = RunThread(parent=None, model_param=self.model_param)
         self.thread.start()
         return self.model_param
         # server = ModularServer(Market, [canvas,chart_count], name="Market simulation",model_params=self.model_param)
         # server.launch()
+
+    def update_customer(self,custyp_name):
+        if custyp_name in self.customerTypes.keys():
+            self.setCustomerType(self.customerTypes[custyp_name])
 
     def close_GUI(self):
         self.MainWindow.close()
@@ -262,57 +281,157 @@ class SetupGui():
 
         print("close dialog")
 
-    def saveCustomerType(self):
+    def getCustomerTypeFromUi(self):
         seller_preferenceList = [str(self.ui.listWidget_sellerpreferencelist.item(
             i).text()) for i in range(self.ui.listWidget_sellerpreferencelist.count())]
         root = self.ui.treeWidget_productpreference.invisibleRootItem()
         child_count = root.childCount()
         product_preferencelist = {}
-
         for i in range(child_count):
             item = root.child(i)
             product_preferencelist[item.text(0)] = int(item.text(1))
         user_customer = Customer(1, Market)
         user_customer.preference_list = product_preferencelist
-        user_customer.percentofall = int(self.ui.lineEdit_percentofall.text())
+        # user_customer.percentofall = int(self.ui.lineEdit_percentofall.text())
         user_customer.seller_preferencelist = seller_preferenceList
         user_customer.lifetime = int(self.ui.lineEdit_lifetime.text())
         type_name = self.ui.comboBox_customertypes.currentText()
         user_customer.type_name = type_name
-        with open("customertypes\\customer_type_" + type_name + '.txt', 'wb') as file1:
-            pickle.dump(user_customer, file1)
-        self.customerTypes[type_name] = user_customer
+        prob= 0.5
+        lamda= 10
+        if self.ui.radioButton_probabilityfixed.isChecked() is True:
+            prob = float(self.ui.lineEdit_probfixval.text())
+        elif self.ui.radioButton_probabilityfile.isChecked() is True:
+            prob = str(self.ui.lineEdit_probfile.text())
+        elif self.ui.radioButton_probabilitypoly.isChecked() is True:
+            prob = [float(p) for p in self.ui.lineEdit_probpoly.text().split()]
+        if self.ui.radioButton_lamdafixed.isChecked() is True:
+            lamda = int(self.ui.lineEdit_lambdafixval.text())
+        elif self.ui.radioButton_lamdafile.isChecked() is True:
+            lamda = str(self.ui.lineEdit_lambdafile.text())
+        elif self.ui.radioButton_polylamda.isChecked() is True:
+            lamda = [float(p) for p in self.ui.lineEdit_lambdapoly.text().split()]
+        custyp = CustomerType(samplecustomer=user_customer, typeName=type_name, contprobfile=prob,lambdafile=lamda)
+        return custyp
 
-        # print(self.ui.comboBox_customertypes.currentText())
-        # print(product_preferencelist )
-        # print(sellerpreferenceList)
+    def setCustomerType(self,customertyp):
 
-    def load_customerType(self,text=None):
-        if text is not None:
-            options = QtWidgets.QFileDialog.Options()
-            options |= QtWidgets.QFileDialog.DontUseNativeDialog
-            fileName = QtWidgets.QFileDialog.getOpenFileName(
-                self.MainWindow, "select proper file ")
-            if isinstance(fileName, tuple):
-                fileName = fileName[0]
-            else:
-                fileName = str(fileName)
-            print(fileName)
-            with open(fileName, 'rb') as filehandler:
-                user_customer = pickle.load(filehandler)
-        elif isinstance(self.customerTypes[text], CustomerType):
-            user_customer=self.customerTypes[text]
-        self.fill_preferencelist(user_customer.preference_list)
-        self.fill_sellerpreferencelist(user_customer.seller_preferencelist)
-        self.ui.comboBox_customertypes.addItem(user_customer.type_name)
-        self.ui.comboBox_customertypes.setCurrentText(
-            user_customer.type_name)
-        self.ui.lineEdit_lifetime.setText(str(user_customer.lifetime))
-        self.ui.lineEdit_percentofall.setText(
-            str(user_customer.percentofall))
-        self.customerTypes[user_customer.type_name] = user_customer
-        print(user_customer.__dict__)
+        if customertyp == "<new>" :
+            self.ui.comboBox_customertypes.setEditable(True)
+            self.lastcustomertype = "<new>"
+            self.ui.Button_newcustomer.show()
+            return
+        elif self.lastcustomertype == "<new>" :
+            self.ui.comboBox_customertypes.setEditable(False)
+            self.ui.Button_newcustomer.hide()
 
+        self.ui.comboBox_customertypes.setCurrentText(self.lastcustomertype)
+        if self.lastcustomertype != "" and self.lastcustomertype != "<new>":
+            self.customerTypes[self.lastcustomertype]=self.getCustomerTypeFromUi()
+
+        mm = self.ui.comboBox_customertypes.currentIndex()
+
+        # self.lastcustomertype=self.ui.comboBox_customertypes.currentText()
+        self.ui.comboBox_customertypes.setCurrentText(self.lastcustomertype)
+        if customertyp == self.lastcustomertype:
+            return
+
+        if isinstance(customertyp,str) and str(customertyp) in self.customerTypes.keys() :
+            customertyp=self.customerTypes[customertyp]
+        if isinstance(customertyp,Customer):
+            user_customer = customertyp
+            self.fill_preferencelist(user_customer.preference_list)
+            self.fill_sellerpreferencelist(user_customer.seller_preferencelist)
+            # self.ui.comboBox_customertypes.addItem(user_customer.type_name)
+            self.ui.comboBox_customertypes.setCurrentText(user_customer.type_name)
+            self.ui.lineEdit_lifetime.setText(str(user_customer.lifetime))
+            self.lastcustomertype = user_customer.type_name
+        elif isinstance(customertyp,CustomerType):
+            self.fill_preferencelist(customertyp.sampleCustomer.preference_list)
+            self.fill_sellerpreferencelist(customertyp.sampleCustomer.seller_preferencelist)
+            # self.ui.comboBox_customertypes.addItem(user_customer.type_name)
+            self.ui.comboBox_customertypes.setCurrentText(customertyp.typeName)
+            self.ui.lineEdit_lifetime.setText(str(customertyp.sampleCustomer.lifetime))
+            self.lastcustomertype = customertyp.typeName
+            if isinstance(customertyp.lambdafile, str):
+                print("use filepath for generation ratio")
+                self.ui.radioButton_lamdafile.click()
+                self.ui.lineEdit_lambdafile.setText(str(customertyp.lambdafile))
+            elif isinstance(customertyp.lambdafile, int):
+                print("use fix generation ratio")
+                self.ui.radioButton_lamdafixed.click()
+                self.ui.lineEdit_lambdafixval.setText(str(customertyp.lambdafile))
+            elif isinstance(customertyp.lambdafile, list):
+                print("use polynomial generation ratio")
+                self.ui.radioButton_polylamda.click()
+                plist=""
+                for cell in customertyp.lambdafile:
+                    plist+=str(cell)+" "
+                self.ui.lineEdit_lambdapoly.setText(plist)
+            if isinstance(customertyp.contprobfile, str):
+                print("use filepath for generation ratio")
+                self.ui.radioButton_probabilityfile.click()
+                self.ui.lineEdit_probfile.setText(str(customertyp.contprobfile))
+            elif isinstance(customertyp.contprobfile, float):
+                print("use fix generation ratio")
+                self.ui.radioButton_probabilityfixed.click()
+                self.ui.lineEdit_probfixval.setText(str(customertyp.contprobfile))
+            elif isinstance(customertyp.contprobfile, list):
+                self.ui.radioButton_probabilitypoly.click()
+                print("use polynomial generation ratio")
+                for cell in customertyp.contprobfile:
+                    plist+=str(cell)+" "
+                self.ui.lineEdit_probpoly.setText(plist)
+        self.ui.comboBox_customertypes.show()
+
+        # self.ui.lineEdit_percentofall.setText(str(user_customer.percentofall))
+        # self.customerTypes[user_customer.type_name] = user_customer
+        # print(user_customer.__dict__)
+
+    def saveCustomerType(self):
+        custype=self.getCustomerTypeFromUi()
+        with open("customertypes\\customer_type_" + custype.typeName + '.txt', 'wb') as file1:
+            pickle.dump(custype, file1)
+        self.customerTypes[custype.typeName] = custype
+
+    def load_customerType(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        fileName = QtWidgets.QFileDialog.getOpenFileName(
+            self.MainWindow, "select proper file ")
+        if isinstance(fileName, tuple):
+            fileName = fileName[0]
+        else:
+            fileName = str(fileName)
+        print(fileName)
+        if not fileName:
+            return
+        with open(fileName, 'rb') as filehandler:
+            user_customer = pickle.load(filehandler)
+        if  isinstance(user_customer,CustomerType):
+            self.ui.comboBox_customertypes.addItem(user_customer.typeName)
+            self.setCustomerType(user_customer)
+            self.customerTypes[user_customer.typeName]=user_customer
+            self.ui.comboBox_customertypes.show()
+
+    def newcustomerType(self):
+        typname=self.ui.comboBox_customertypes.lineEdit().text()
+        self.ui.comboBox_customertypes.setEditable(False)
+
+        self.ui.comboBox_customertypes.addItem(typname)
+        custyp=self.getCustomerTypeFromUi()
+        custyp.typeName=typname
+        custyp.sampleCustomer.type_name=typname
+        self.customerTypes[typname]=custyp
+        self.ui.Button_newcustomer.hide()
+
+        # self.ui.comboBox_customertypes.addItem(str(self.ui.comboBox_customertypes.count()))
+
+    def removecustomerType(self):
+        typename=self.ui.comboBox_customertypes.currentText()
+        if typename !="<new>":
+            self.ui.comboBox_customertypes.removeItem(self.ui.comboBox_customertypes.findText(typename))
+            self.customerTypes.pop(typename)
     def load3testcustomertype(self):
         # c = CustomerType(samplecustomer=typ, typeName=typ.type_name, lambdafile="lambda.csv",
         #                  contprobfile="contprob.csv")
@@ -345,7 +464,6 @@ class SetupGui():
 
     def batchmodesetup(self):
         pass
-
 
 def load3testcustomertype():
     custypes = {}
