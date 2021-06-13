@@ -1,8 +1,11 @@
+import pickle
+
 from numpy import random
 from random import shuffle
 import random as rnn
 
 from mesa.agent import Agent
+
 
 
 class Product:
@@ -34,18 +37,22 @@ class Negotiation:
         elif status == 3:
             self.status = "FAILED_EMPTY"
 
-
 class Seller(Agent):
-    def __init__(self, unique_id, model, pos=None,inventory=None):
+    def __init__(self, unique_id, model,name='', pos=None,inventory=None):
         super().__init__(unique_id, model)
         self.pos = pos
+
         self.inventory_count = 0
         if inventory is None:
-            self.inventory = dict(
-            {"p" + str(i): Product("p" + str(i), random.randint(1, 100) + i * 100, available=random.randint(2, 20)) for
-             i in range(1, 5)})
+            self.inventory = {}
+            for i in range(1, 5):
+                self.inventory["p" + str(i)] = Product("p" + str(i), random.randint(1, 100) + i * 100, available=random.randint(2, 20))
+        else :
+            self.inventory=inventory
         self.inventory_available()
-        self.strategy = self.strategy15
+        # self.strategy = "self.strategy15"
+        # self.strategy = strategy15(self,0.15)
+
         self.revenue = 0
         self.profit = 0
         # self.transactions =[]
@@ -53,6 +60,8 @@ class Seller(Agent):
         # "Goal-Directed" or "Derivative-Following"
         self.succesful_transaction = 0
         self.failed_transaction = 0
+        self.name=name
+        self.model=model
         # if not (self.strategy in ["GD", "DF"]):
         #     raise TypeError(
         #         "'strategy' must be one of {Goal-Directed->GD or Derivative-Following ->DF}")
@@ -67,6 +76,8 @@ class Seller(Agent):
         pass
 
     def strategy15(self,productname,step,percent = 0.15):
+        return self.inventory[productname].minvalue*(1+percent)
+    def strategy(self,productname,step,percent = 0.15):
         return self.inventory[productname].minvalue*(1+percent)
 
     def sell(self, customer, product_name, price):
@@ -91,6 +102,14 @@ class Seller(Agent):
 
     def DF_strategy(self, product):
         pass
+
+
+class strategy15(object):
+    def __init__(self, seller: Seller, percent:float = 0.15):
+        self.seller=seller
+        self.percentage = percent
+    def __call__(self,productname:Product,step:int):
+        return productname.minvalue * self.percentage
 
 
 class DFSeller(Seller):
@@ -217,3 +236,6 @@ class Customer(Agent):
         self.lifetime -= 1
         if self.lifetime == 0:
             self.die()
+
+
+# if __name__ == "__main__":

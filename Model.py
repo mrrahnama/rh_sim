@@ -1,8 +1,10 @@
 import copy
 import csv
 import datetime
+import pickle
 import random
 
+import dill as dill
 from mesa.datacollection import DataCollector
 from mesa.model import Model
 from mesa.space import MultiGrid
@@ -36,6 +38,12 @@ class Market(Model):
             self.create_sellers()
         elif isinstance(sellers,dict):
             self.number_of_seller=len(sellers)
+            i=1
+            for val in sellers.values():
+                if isinstance(val, Seller):
+                    val.model = self
+                    val.unique_id=i
+                    i=i+1
             self.sellers = sellers
             self.addsellerGrid()
         if customerTypes is not None:
@@ -52,9 +60,9 @@ class Market(Model):
         self.transactions =[]
         self.failed_transactions=[]
         self.max_steps=max_steps
-        model_data={
-            "Customer": lambda m: len(m.customers),
-            "Seller": lambda m: m.number_of_seller}
+        self.model_data={}
+        self.setmodeldatareport()
+
         # data = {"Customer": lambda m: m.number_of_customer,
         #         "Seller": lambda m: m.number_of_seller,
         #         }
@@ -65,10 +73,13 @@ class Market(Model):
         # "faild_transaction" :lambda m: m.failed_transactions,
         # agent_data={"Wealth": lambda x: x.wealth}
 
-        self.datacollector = DataCollector(model_data)
+        self.datacollector = DataCollector(self.model_data)
         self.datacollector.collect(self)
         self.generateCustomers()
-
+    def setmodeldatareport(self):
+        self.model_data = {
+            "Customer": lambda m: len(m.customers),
+            "Seller": lambda m: m.number_of_seller}
     def step(self):
        
         self.schedule.step()
@@ -195,7 +206,9 @@ class CustomerType:
         self.typeName=typeName
         self.lambdafile=lambdafile
         self.contprobfile=contprobfile
-    
+        self.lambdafixval=None
+        self.contprobfixval=None
+
     def setlambda(self, filepath=""):
         if filepath=="":
             filepath=self.lambdafile
@@ -217,8 +230,10 @@ class CustomerType:
             
 
 if __name__ == "__main__":
-    #market1 = Market()
-
+    market1 = Market()
+    s = Seller(5,market1, "seller1")
+    with open("sellerTypes\\seller_type_" + s.name + '.txt', 'wb') as file1:
+        pickle.dump(s, file1)
     print(random.randn())
     m=CustomerType(lambdafile="lambda.csv",contprobfile='contprob.csv')
     m.setlambda()

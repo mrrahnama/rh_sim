@@ -4,6 +4,9 @@ import os
 import pickle
 import sys
 import csv
+from builtins import set
+
+import dill
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QTreeWidgetItem, QListWidgetItem
@@ -88,6 +91,7 @@ class SetupGui():
             "inventory", [], self.ui.treeWidget_inventory, columns=3)
         # self.run()
         self.lastcustomertype = ""
+        self.lastseller = ""
         self.updatewidgets()
         self.widgetactions()
         self.MainWindow.show()
@@ -103,6 +107,7 @@ class SetupGui():
             QtGui.QIcon(scriptDir + r"\UI\icon\title.png"))
         self.ui.comboBox_customertypes.addItem("<new>")
         self.ui.Button_newcustomer.hide()
+        self.ui.button_newseller.hide()
 
     def widgetactions(self):
         self.ui.button_pr_preferencelist.clicked.connect(
@@ -132,6 +137,12 @@ class SetupGui():
         #     lambda: self.openFileDialog(self.ui.lineEdit_productlistfile))
         # self.ui.button_seller_listfile.clicked.connect(
         #     lambda: self.openFileDialog(self.ui.lineEdit_sellerfile))
+        self.ui.lineEdit_stratefyfile.setDisabled(self.ui.radioButton_strategyfile.isChecked() is not True)
+        self.ui.radioButton_strategyfile.toggled.connect(
+            lambda: self.ui.lineEdit_stratefyfile.setDisabled(self.ui.radioButton_strategyfile.isChecked() is not True))
+        self.ui.lineEdit_strategypoly.setDisabled(self.ui.radioButton_strategypoly.isChecked() is not True)
+        self.ui.radioButton_strategypoly.toggled.connect(
+            lambda: self.ui.lineEdit_strategypoly.setDisabled(self.ui.radioButton_strategypoly.isChecked() is not True))
         self.ui.lineEdit_probfile.setDisabled(self.ui.radioButton_probabilityfile.isChecked() is not True)
         self.ui.radioButton_probabilityfile.toggled.connect(
             lambda: self.ui.lineEdit_probfile.setDisabled(self.ui.radioButton_probabilityfile.isChecked() is not True))
@@ -155,6 +166,14 @@ class SetupGui():
         # self.ui.comboBox_customertypes.currentTextChanged[str].connect(self.setCustomerType)
         self.ui.Button_newcustomer.clicked.connect(self.newcustomerType)
         self.ui.button_removecusType.clicked.connect(self.removecustomerType)
+        #------------------------------------------------------------------
+        self.ui.button_removeseller.clicked.connect(self.removeSellerType)
+        self.ui.button_newseller.clicked.connect(self.newSellerType)
+        self.ui.button_saveseller.clicked.connect(self.saveSellerType)
+        self.ui.button_loadseller.clicked.connect(self.loadSellerType)
+        self.ui.combo_seller.textActivated.connect(self.setSellerType)
+
+        #--------------------------------------------------------------------
 
     def saveFileDialog(self):
         options = QtWidgets.QFileDialog.Options()
@@ -185,10 +204,13 @@ class SetupGui():
         height = int(math.sqrt(int(self.ui.lineEdit_customerNo.text())) * 2)
         width = height
         simulatin_max_days = int(self.ui.lineEdit_simdays.text())
+        for key,val in self.customerTypes.items():
+            if isinstance(val ,CustomerType):
+                self.customerTypes[key]=self.simobj.create_customer_type(val.typeName,
+                val.sampleCustomer.lifetime,val.sampleCustomer.preference_list,val.lambdafile,val.contprobfile)
         # simulation_batch_run = self.ui.checkbox_batchsimulation.isChecked()
         # batch_run_number=int(self.ui.lineEdit_simNo.text())
-
-        self.load3testcustomertype()
+        # self.load3testcustomertype()
         self.model_param = {
             "height": height,
             "width": width,
@@ -281,6 +303,8 @@ class SetupGui():
 
         print("close dialog")
 
+    # ---------------------------------------------------------------------
+
     def getCustomerTypeFromUi(self):
         seller_preferenceList = [str(self.ui.listWidget_sellerpreferencelist.item(
             i).text()) for i in range(self.ui.listWidget_sellerpreferencelist.count())]
@@ -311,6 +335,7 @@ class SetupGui():
             lamda = str(self.ui.lineEdit_lambdafile.text())
         elif self.ui.radioButton_polylamda.isChecked() is True:
             lamda = [float(p) for p in self.ui.lineEdit_lambdapoly.text().split()]
+        # custyp=self.simobj.create_customer_type(type_name,user_customer.lifetime,user_customer.preference_list,lamda,prob)
         custyp = CustomerType(samplecustomer=user_customer, typeName=type_name, contprobfile=prob,lambdafile=lamda)
         return custyp
 
@@ -391,7 +416,7 @@ class SetupGui():
     def saveCustomerType(self):
         custype=self.getCustomerTypeFromUi()
         with open("customertypes\\customer_type_" + custype.typeName + '.txt', 'wb') as file1:
-            pickle.dump(custype, file1)
+            dill.dump(custype, file1)
         self.customerTypes[custype.typeName] = custype
 
     def load_customerType(self):
@@ -407,8 +432,8 @@ class SetupGui():
         if not fileName:
             return
         with open(fileName, 'rb') as filehandler:
-            user_customer = pickle.load(filehandler)
-        if  isinstance(user_customer,CustomerType):
+            user_customer = dill.load(filehandler)
+        if isinstance(user_customer,CustomerType):
             self.ui.comboBox_customertypes.addItem(user_customer.typeName)
             self.setCustomerType(user_customer)
             self.customerTypes[user_customer.typeName]=user_customer
@@ -432,6 +457,112 @@ class SetupGui():
         if typename !="<new>":
             self.ui.comboBox_customertypes.removeItem(self.ui.comboBox_customertypes.findText(typename))
             self.customerTypes.pop(typename)
+
+    # ---------------------------------------------------------------------
+
+    def getSellerTypeFromUi(self):
+        root = self.ui.treeWidget_inventory.invisibleRootItem()
+        child_count = root.childCount()
+        inventory = {}
+        strategy=""
+        for i in range(child_count):
+            item = root.child(i)
+            inventory[item.text(0)] = Product(name=item.text(0),minvalue=item.text(1),available=int(item.text(2)))
+        sellerName = self.ui.combo_seller.currentText()
+        if self.ui.radioButton_strategyfile.isChecked() is True:
+            strategy = str(self.ui.lineEdit_stratefyfile.text())
+        elif self.ui.radioButton_strategypoly.isChecked() is True:
+            strategy = [float(p) for p in self.ui.lineEdit_strategypoly.text().split()]
+        else:
+            strategy=None
+        seller = self.simobj.create_seller(inventory=inventory, strategy=strategy, name=sellerName)
+        if self.ui.combo_seller.findText(sellerName) > -1:
+            seller.unique_id=self.ui.combo_seller.findText(sellerName)
+        else:
+            seller.unique_id=self.ui.combo_seller.count()
+        seller.name=sellerName
+        return seller
+
+    def setSellerType(self,sellertyp):
+
+        if self.lastseller != "" and self.lastseller != "<new>":
+            self.sellerTypes[self.lastseller]=self.getSellerTypeFromUi()
+
+        if sellertyp == "<new>" :
+            self.ui.combo_seller.setEditable(True)
+            self.lastseller = "<new>"
+            self.ui.button_newseller.show()
+            return
+        elif self.lastseller == "<new>" :
+            self.ui.combo_seller.setEditable(False)
+            self.ui.button_newseller.hide()
+
+        self.ui.combo_seller.setCurrentText(self.lastseller)
+
+        if sellertyp == self.lastseller:
+            return
+
+        if isinstance(sellertyp,str) and str(sellertyp) in self.sellerTypes.keys():
+            sellertyp=self.sellerTypes[sellertyp]
+        if isinstance(sellertyp,Seller):
+            self.fill_inventory(sellertyp.inventory)
+            self.ui.combo_seller.setCurrentText(sellertyp.name)
+            self.lastseller = sellertyp.name
+            if isinstance(sellertyp.strategy, str):
+                print("use filepath for generation ratio")
+                self.ui.radioButton_strategyfile.click()
+                self.ui.lineEdit_stratefyfile.setText(str(sellertyp.strategy))
+            elif isinstance(sellertyp.strategy, list):
+                print("use polynomial generation ratio")
+                self.ui.radioButton_strategypoly.click()
+                plist=""
+                for cell in sellertyp.strategy:
+                    plist+=str(cell)+" "
+                self.ui.lineEdit_strategypoly.setText(plist)
+        self.ui.combo_seller.show()
+
+    def saveSellerType(self):
+        sellertyp=self.getSellerTypeFromUi()
+        with open("sellerTypes\\seller_type_" + sellertyp.name + '.txt', 'wb') as file1:
+            dill.dump(sellertyp, file1)
+        self.sellerTypes[sellertyp.name] = sellertyp
+
+    def loadSellerType(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        fileName = QtWidgets.QFileDialog.getOpenFileName(
+            self.MainWindow, "select proper file ")
+        if isinstance(fileName, tuple):
+            fileName = fileName[0]
+        else:
+            fileName = str(fileName)
+        print(fileName)
+        if not fileName:
+            return
+        with open(fileName, 'rb') as filehandler:
+            sellertype = dill.load(filehandler)
+        if isinstance(sellertype,Seller):
+            self.ui.combo_seller.addItem(sellertype.name)
+            self.setSellerType(sellertype)
+            self.sellerTypes[sellertype.name]=sellertype
+            self.ui.combo_seller.show()
+
+    def newSellerType(self):
+        typname=self.ui.combo_seller.lineEdit().text()
+        self.ui.combo_seller.setEditable(False)
+        self.ui.combo_seller.addItem(typname)
+        sellertyp=self.getSellerTypeFromUi()
+        sellertyp.name=typname
+        sellertyp.name=typname
+        self.sellerTypes[typname]=sellertyp
+        self.ui.button_newseller.hide()
+
+    def removeSellerType(self):
+        typename=self.ui.combo_seller.currentText()
+        if typename !="<new>":
+            self.ui.combo_seller.removeItem(self.ui.combo_seller.findText(typename))
+            self.sellerTypes.pop(typename)
+    # -----------------------------------------------------------------------------
     def load3testcustomertype(self):
         # c = CustomerType(samplecustomer=typ, typeName=typ.type_name, lambdafile="lambda.csv",
         #                  contprobfile="contprob.csv")
@@ -444,14 +575,22 @@ class SetupGui():
         with open("customertypes/customer_type_customernormal.txt", 'rb') as filehandler:
             self.customerTypes["customernormal"] = pickle.load(filehandler)
 
-    def saveSellerType(self):
-        pass
 
     def fill_preferencelist(self, preferenc_dict={}):
         self.ui.treeWidget_productpreference.clear()
         for key, val in preferenc_dict.items():
             self.ui.treeWidget_productpreference.addTopLevelItem(
                 QTreeWidgetItem(self.ui.treeWidget_productpreference, [key, str(val)]))
+
+    def fill_inventory(self, inventory={}):
+        self.ui.treeWidget_inventory.clear()
+        for key, val in inventory.items():
+            if isinstance(val ,Product):
+                self.ui.treeWidget_inventory.addTopLevelItem(
+                    QTreeWidgetItem(self.ui.treeWidget_inventory, [key, str(val.minvalue),str(val.available)]))
+            else:
+                self.ui.treeWidget_inventory.addTopLevelItem(
+                QTreeWidgetItem(self.ui.treeWidget_inventory, [key, str(val)]))
 
     def fill_sellerpreferencelist(self, preferenc_list=[]):
         self.ui.listWidget_sellerpreferencelist.clear()
@@ -501,7 +640,7 @@ class MarketSimulation():
         samplecus = Customer(1, Market(), None, lifetime=lifetime)
         samplecus.preference_list = preferenclist
         samplecus.type_name = name
-        samplecus.ignorShopping = forcebuyprob
+        # samplecus.ignorShopping = forcebuyprob
         custyp = CustomerType(samplecustomer=samplecus)
         if callable(generationlambda):
             print("use custom function generation ratio")
@@ -512,6 +651,7 @@ class MarketSimulation():
         elif isinstance(generationlambda, int):
             print("use fix generation ratio")
             custyp.getLambda = lambda step: generationlambda
+            custyp.lambdafixval=generationlambda
         elif isinstance(generationlambda, list):
             print("use polynomial generation ratio")
             custyp.getLambda = lambda step: np.polyval(generationlambda, step)
@@ -524,6 +664,7 @@ class MarketSimulation():
         elif isinstance(forcebuyprob, float):
             print("use fix generation ratio")
             custyp.getcontprob = lambda tryNo: forcebuyprob
+            custyp.contprobfixval=forcebuyprob
         elif isinstance(forcebuyprob, list):
             print("use polynomial generation ratio")
             custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, tryNo)
@@ -531,11 +672,13 @@ class MarketSimulation():
 
     # seller
 
-    def create_seller(self, strategy=None, inventory=None):
+    def create_seller(self, strategy=None, inventory=None,name=None):
         seller = Seller(len(self.seller_list), Market())
         seller.inventory = inventory
         if strategy is not None:
             seller.strategy = strategy
+        if name is None:
+            seller.name=str(seller.unique_id)
         seller.inventory_available()
         return seller
 
@@ -641,6 +784,7 @@ class MarketSimulation():
 
 
 if __name__ == "__main__":
+
     print("choose run mode")
     print("1 --> setup window")
     print("2 --> visual run ")
