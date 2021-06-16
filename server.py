@@ -5,6 +5,7 @@ import pickle
 import sys
 import csv
 from builtins import set
+from numpy.polynomial.polynomial import polyval2d
 
 import dill
 from PyQt5 import QtCore
@@ -208,6 +209,13 @@ class SetupGui():
             if isinstance(val ,CustomerType):
                 self.customerTypes[key]=self.simobj.create_customer_type(val.typeName,
                 val.sampleCustomer.lifetime,val.sampleCustomer.preference_list,val.lambdafile,val.contprobfile)
+        i=1
+        for key ,val in self.sellerTypes.items():
+            if isinstance(val, Seller):
+                val=self.simobj.create_seller(val.strategy,val.inventory,val.name)
+                val.unique_id=i
+                self.sellerTypes[key]=val
+                i = i + 1
         # simulation_batch_run = self.ui.checkbox_batchsimulation.isChecked()
         # batch_run_number=int(self.ui.lineEdit_simNo.text())
         # self.load3testcustomertype()
@@ -473,9 +481,10 @@ class SetupGui():
             strategy = str(self.ui.lineEdit_stratefyfile.text())
         elif self.ui.radioButton_strategypoly.isChecked() is True:
             strategy = [float(p) for p in self.ui.lineEdit_strategypoly.text().split()]
-        else:
-            strategy=None
-        seller = self.simobj.create_seller(inventory=inventory, strategy=strategy, name=sellerName)
+        elif self.ui.radioButton_strategyfixed.isChecked() is True:
+            strategy = float(self.ui.lineEdit_strategyfixval.text())
+        seller = self.simobj.create_seller(inventory=inventory, strategy=None, name=sellerName)
+        seller.strategy=strategy
         if self.ui.combo_seller.findText(sellerName) > -1:
             seller.unique_id=self.ui.combo_seller.findText(sellerName)
         else:
@@ -485,6 +494,10 @@ class SetupGui():
 
     def setSellerType(self,sellertyp):
 
+        m=self.ui.combo_seller.currentText()
+
+        self.ui.combo_seller.setCurrentText(self.lastseller)
+        m=self.ui.combo_seller.currentText()
         if self.lastseller != "" and self.lastseller != "<new>":
             self.sellerTypes[self.lastseller]=self.getSellerTypeFromUi()
 
@@ -497,7 +510,6 @@ class SetupGui():
             self.ui.combo_seller.setEditable(False)
             self.ui.button_newseller.hide()
 
-        self.ui.combo_seller.setCurrentText(self.lastseller)
 
         if sellertyp == self.lastseller:
             return
@@ -519,6 +531,9 @@ class SetupGui():
                 for cell in sellertyp.strategy:
                     plist+=str(cell)+" "
                 self.ui.lineEdit_strategypoly.setText(plist)
+            elif isinstance(sellertyp.strategy,float):
+                self.ui.radioButton_strategyfixed.click()
+                self.ui.lineEdit_strategyfixval.setText(str(sellertyp.strategy))
         self.ui.combo_seller.show()
 
     def saveSellerType(self):
@@ -552,10 +567,13 @@ class SetupGui():
         self.ui.combo_seller.setEditable(False)
         self.ui.combo_seller.addItem(typname)
         sellertyp=self.getSellerTypeFromUi()
-        sellertyp.name=typname
+        self.lastseller=typname
         sellertyp.name=typname
         self.sellerTypes[typname]=sellertyp
         self.ui.button_newseller.hide()
+        self.ui.combo_seller.setCurrentText(typname)
+        self.ui.combo_seller.show()
+
 
     def removeSellerType(self):
         typename=self.ui.combo_seller.currentText()
@@ -654,7 +672,7 @@ class MarketSimulation():
             custyp.lambdafixval=generationlambda
         elif isinstance(generationlambda, list):
             print("use polynomial generation ratio")
-            custyp.getLambda = lambda step: np.polyval(generationlambda, step)
+            custyp.getLambda = lambda step: np.polyval(generationlambda, int(step))
         if callable(forcebuyprob):
             print("use custom function generation ratio")
             custyp.getcontprob = forcebuyprob
@@ -667,7 +685,8 @@ class MarketSimulation():
             custyp.contprobfixval=forcebuyprob
         elif isinstance(forcebuyprob, list):
             print("use polynomial generation ratio")
-            custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, tryNo)
+            custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, int(tryNo))
+        custyp.typeName=name
         return custyp
 
     # seller
@@ -676,9 +695,16 @@ class MarketSimulation():
         seller = Seller(len(self.seller_list), Market())
         seller.inventory = inventory
         if strategy is not None:
-            seller.strategy = strategy
+            if isinstance(strategy,list):
+                seller.strategy=lambda product,step,:polyval2d(step,product.minvalue,strategy)
+            elif callable(strategy):
+                seller.strategy=strategy
+            elif isinstance(strategy,float):
+                seller.strategy = lambda product,step,:seller.strategy15(product,step,strategy)
         if name is None:
             seller.name=str(seller.unique_id)
+        else :
+            seller.name=name
         seller.inventory_available()
         return seller
 

@@ -39,10 +39,11 @@ class Market(Model):
         elif isinstance(sellers,dict):
             self.number_of_seller=len(sellers)
             i=1
-            for val in sellers.values():
+            for key,val in sellers.items():
                 if isinstance(val, Seller):
                     val.model = self
                     val.unique_id=i
+                    sellers[key]=val
                     i=i+1
             self.sellers = sellers
             self.addsellerGrid()

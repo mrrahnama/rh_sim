@@ -173,7 +173,7 @@ class Customer(Agent):
 
             if p in seller.inventory:
 
-                price = seller.strategy(p,self.model.schedule.steps,0.10)
+                price = seller.strategy(p,self.model.schedule.steps)
                 # price = seller.inventory.get(p).offervalue
                 if (self.preference_list.get(p) >= price) and (seller.sell(self, p, price)):
 
