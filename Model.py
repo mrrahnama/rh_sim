@@ -168,11 +168,13 @@ class Market(Model):
         for new_customer in self.customers:
             self.schedule.add(new_customer)
     def addCusGrid(self):
-        for new_customer in self.customers:
-            self.grid.place_agent(new_customer,self.grid.find_empty())
+        if self.grid is not None:
+            for new_customer in self.customers:
+                self.grid.place_agent(new_customer,self.grid.find_empty())
     def addsellerGrid(self):
-        for seller in self.sellers.values():
-            self.grid.place_agent(seller,self.grid.find_empty())
+        if self.grid is not None:
+            for seller in self.sellers.values():
+                self.grid.place_agent(seller,self.grid.find_empty())
     # def create_customers(self,customerTypes=None):
     #     if isinstance(customerTypes,dict):
     #         uid =1

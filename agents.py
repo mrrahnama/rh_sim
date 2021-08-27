@@ -228,12 +228,13 @@ class Customer(Agent):
             return True
         return False
     def die(self):
-        self.model.grid._remove_agent(self.pos, self)
+        if self.model.grid is not None:
+            self.model.grid._remove_agent(self.pos, self)
         self.model.schedule.remove(self)
         self.model.number_of_customer -= 1
 
     def step(self):
-        # seller = self.find_store()
+        # seller = self.find_store() /todo::this function doesn't handle non grid runs
         if isinstance(self.model.sellers,dict):
             my_sellers = list(self.model.sellers.values())
         else:

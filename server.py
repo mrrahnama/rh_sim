@@ -803,6 +803,7 @@ class MarketSimulation():
             "max_steps": self.simulation_time,
             "customerTypes": self.customer_types,
             "sellers": self.seller_list,
+
         }
         self.is_running = True
 
@@ -814,6 +815,7 @@ class MarketSimulation():
             self.server = ModularServer(Market, [
             canvas, chart_count], name="Market simulation", model_params=self.model_param)
         else:
+            self.model_param["hasgrid"]=False
             self.server = ModularServer(Market, [chart_count], name="Market simulation", model_params=self.model_param)
         # self.server.signalobj.closesignal.connect(self.stop)
         self.server.launch()  # emit new Signal with value
@@ -833,8 +835,13 @@ class MarketSimulation():
             "max_steps": self.simulation_time,
             "customerTypes": self.customer_types,
             "sellers": self.seller_list,
+            "hasgrid":False,
+
         }
         self.is_running = True
+        model=Market(**self.model_param)
+        while model.running:
+            model.step()
 
     def batch_run(self):
         pass

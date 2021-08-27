@@ -114,7 +114,7 @@ products = r"C:\SSD\Uni\Thesis\mr eskandari\inventory\model_200x50_1\23\result_0
 with open(fileName, 'rb') as filehandler:
     AssortmentModelobj1 = dill.load(filehandler)
 simobj = MarketSimulation()
-customertypes = import_customertypes(AssortmentModelobj1, msim=simobj,population_size=10000)
+customertypes = import_customertypes(AssortmentModelobj1, msim=simobj,population_size=100000)
 assortmentseller = import_seller(products, AssortmentModelobj1, msim=simobj)
 sellerlist = []
 sellerlist.append(assortmentseller)
@@ -123,7 +123,7 @@ for i in range(5):
     sellerlist.append(create_random_seller_for_assortment(AssortmentModelobj1,len(assortmentseller.inventory),simobj))
 print("procces finished")
 simobj.set_market_capacity(150)
-simobj.set_max_days(1)
+simobj.set_max_days(2)
 simobj.report_path = "C:/SSD/Uni/Thesis/Source/main/simulator/reports/"
 i = 1
 for seller in sellerlist:
@@ -137,6 +137,7 @@ for custype in customertypes:
         i+=1
     else :
         break
-simobj.run(visual=False)
+# simobj.run(visual=False)
 # for i in range(simobj.simulation_time):
+simobj.console_run()
 
