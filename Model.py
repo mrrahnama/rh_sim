@@ -19,7 +19,7 @@ default_min_price=700000
 
 
 class Market(Model):
-    def __init__(self, width=20, height=20, report_address="",max_steps=1000,customerTypes = None,sellers=None):
+    def __init__(self, width=20, height=20, report_address="",max_steps=1000,customerTypes = None,sellers=None,hasgrid=True):
         Model.__init__(self)
         # super().__init__(self,seed=seed)
         self.product_list={}
@@ -30,9 +30,13 @@ class Market(Model):
         self.customerTypesDic={}
         self.number_of_customer = 0
         self.number_of_seller=0
-        self.grid = MultiGrid(width, height, False)
+        if hasgrid:
+            self.grid = MultiGrid(width, height, False)
+        else:
+            self.grid = None
         self.schedule = RandomActivation(self)
         self.report_address=report_address
+        self.step_report=[]
         if isinstance(sellers,int):
             self.number_of_seller = sellers
             self.create_sellers()
@@ -63,7 +67,6 @@ class Market(Model):
         self.max_steps=max_steps
         self.model_data={}
         self.setmodeldatareport()
-
         # data = {"Customer": lambda m: m.number_of_customer,
         #         "Seller": lambda m: m.number_of_seller,
         #         }
@@ -73,7 +76,6 @@ class Market(Model):
         # "transaction":lambda m: m.transactions,
         # "faild_transaction" :lambda m: m.failed_transactions,
         # agent_data={"Wealth": lambda x: x.wealth}
-
         self.datacollector = DataCollector(self.model_data)
         self.datacollector.collect(self)
         self.generateCustomers()
@@ -81,10 +83,26 @@ class Market(Model):
         self.model_data = {
             "Customer": lambda m: len(m.customers),
             "Seller": lambda m: m.number_of_seller}
+    def collectStepReport(self):
+        self.step_report.append({"seller_"+str(seller.unique_id) : seller.revenue - seller.laststepinffo['revenue'] for seller in self.sellers.values()})
+        if self.running is False:
+            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            with open(self.report_address + current_time + 'r_step_report.csv', 'w', newline='') as f:
+                # fieldnames lists the headers for the csv.
+                w = csv.DictWriter(f, fieldnames=self.step_report[0].keys())
+                w.writeheader()
+                for obj in self.step_report:
+                    # Build a dictionary of the member names and values...
+                    w.writerow(obj)
+            with open(self.report_address + current_time + 'r_seller_offerlists.csv', 'w', newline='') as f:
+                # fieldnames lists the headers for the csv.
+                w = csv.DictWriter(f, fieldnames=self.sellers.keys())
+                w.writeheader()
+                # Build a dictionary of the member names and values...
+                for i in range(len(list(self.sellers.values())[0].inventory)):
+                    w.writerow({seller.unique_id:list(seller.inventory.keys())[i] for seller in self.sellers.values()})
     def step(self):
-       
-        self.schedule.step()
-        self.datacollector.collect(self)
+        print(" step:" + str(self.schedule.steps) )
         # if not(self.grid.exists_empty_cells()):
         if  self.schedule.steps > self.max_steps:
             self.running = False
@@ -102,20 +120,30 @@ class Market(Model):
             # br_step_data.to_csv("market_Step_Data.csv")
             with open(self.report_address+current_time+"r_sellers.csv",'w',newline='') as f:
             # fieldnames lists the headers for the csv.
-                field_names=['unique_id','failed_transaction','succesful_transaction','revenue','profit','inventory_count']
-                w = csv.DictWriter(f,fieldnames=field_names)
+                field_names=['unique_id','name','failed_transaction','succesful_transaction','revenue','profit', 'inventory_count']
+                w = csv.DictWriter(f,fieldnames= field_names)
                 w.writeheader()
                 for seller in self.sellers.values():
                     seller.inventory_available()
             # Build a dictionary of the member names and values...
                     w.writerow({k:getattr(seller,k) for k in field_names})
+            self.collectStepReport()
+            return
+
+        self.schedule.step()
+        self.datacollector.collect(self)
+        self.collectStepReport()
+
+        for seller in self.sellers.values():
+            seller.revenuebystep.append(seller.revenue-seller.laststepinffo['revenue'])
+            seller.laststepinffo['revenue']=seller.revenue
         self.generateCustomers()
     def generateCustomers(self):
         self.customers=[]
         #for cusType in self.customerTypes:
         for cusType in self.customerTypesDic.values():
             startid=len(self.customers)
-            print(" step:" +str( self.schedule.steps)+ "     ctyp: " +cusType.typeName +"")
+            # print(" step:" +str( self.schedule.steps)+ "     ctyp: " +cusType.typeName +"")
             self.customers.extend(self.create_customer_custype(cusType, startid))
         self.addCusGrid()
         self.addCusSch()
@@ -123,7 +151,10 @@ class Market(Model):
         if isinstance(customerType, CustomerType):  #TODO:  change  type to customerType 
             uid = id
             customer_generated = []
-            populationSize = random.poisson(lam=customerType.getLambda(self.schedule.steps))
+            ll=customerType.getLambda(self.schedule.steps)
+            if ll<0:
+                ll=0
+            populationSize = int(random.poisson(lam=ll))
             for i in range(populationSize):
                 new_customer = Customer(uid, self)
                 new_customer.lifetime = customerType.sampleCustomer.lifetime
@@ -169,7 +200,8 @@ class Market(Model):
         self.sellers = {}
         for i in range(self.number_of_seller):
             new_seller = Seller(i, self)
-            self.grid.place_agent(new_seller,self.grid.find_empty())
+            if self.grid is not None:
+                self.grid.place_agent(new_seller,self.grid.find_empty())
             # self.schedule.add(new_seller)
             self.sellers[i]=new_seller
     def gen_rand_productlist(self,**kwarg):

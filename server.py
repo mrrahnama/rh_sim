@@ -30,15 +30,22 @@ from treamanage import TreeManage
 def market_portrayal(agent):
     if agent is None:
         return
-    portrayal = {"Shape": "UI/icon/store_color.png", "Filled":
-        "true", "w": 1, "h": 1, "Layer": 0}
+    portrayal = {"Shape": "circle",
+    # portrayal = {"Shape": "UI/icon/store_color.png",
+                 "Filled":"true",
+                 # "w": 1,
+                 # "h": 1,
+                 "r":1,
+                 "Layer": 0}
     if type(agent) is Seller:
         portrayal["Color"] = "cornflowerblue"
     elif type(agent) is Customer:
-        portrayal["Shape"] = "UI/icon/customer4.png"
+        # portrayal["Shape"] = "UI/icon/customer4.png"
+        # portrayal["Shape"] = "circle"
+
         portrayal["Color"] = "tomato"
         portrayal["r"] = 1
-        portrayal["scale"] = 0.6
+        # portrayal["scale"] = 0.6
         portrayal["Layer"] = 1
     return portrayal
 
@@ -336,13 +343,15 @@ class SetupGui():
         elif self.ui.radioButton_probabilityfile.isChecked() is True:
             prob = str(self.ui.lineEdit_probfile.text())
         elif self.ui.radioButton_probabilitypoly.isChecked() is True:
-            prob = [float(p) for p in self.ui.lineEdit_probpoly.text().split()]
+            prob = [self.ui.lineEdit_probpoly.text()]
+            # prob = [float(p) for p in self.ui.lineEdit_probpoly.text().split()]
         if self.ui.radioButton_lamdafixed.isChecked() is True:
             lamda = int(self.ui.lineEdit_lambdafixval.text())
         elif self.ui.radioButton_lamdafile.isChecked() is True:
             lamda = str(self.ui.lineEdit_lambdafile.text())
         elif self.ui.radioButton_polylamda.isChecked() is True:
-            lamda = [float(p) for p in self.ui.lineEdit_lambdapoly.text().split()]
+            # lamda = [float(p) for p in self.ui.lineEdit_lambdapoly.text().split()]
+            lamda = [self.ui.lineEdit_lambdapoly.text()]
         # custyp=self.simobj.create_customer_type(type_name,user_customer.lifetime,user_customer.preference_list,lamda,prob)
         custyp = CustomerType(samplecustomer=user_customer, typeName=type_name, contprobfile=prob,lambdafile=lamda)
         return custyp
@@ -397,10 +406,10 @@ class SetupGui():
             elif isinstance(customertyp.lambdafile, list):
                 print("use polynomial generation ratio")
                 self.ui.radioButton_polylamda.click()
-                plist=""
-                for cell in customertyp.lambdafile:
-                    plist+=str(cell)+" "
-                self.ui.lineEdit_lambdapoly.setText(plist)
+                # plist=""
+                # for cell in customertyp.lambdafile:
+                #     plist+=str(cell)+" "
+                self.ui.lineEdit_lambdapoly.setText(customertyp.lambdafile[0])
             if isinstance(customertyp.contprobfile, str):
                 print("use filepath for generation ratio")
                 self.ui.radioButton_probabilityfile.click()
@@ -412,9 +421,9 @@ class SetupGui():
             elif isinstance(customertyp.contprobfile, list):
                 self.ui.radioButton_probabilitypoly.click()
                 print("use polynomial generation ratio")
-                for cell in customertyp.contprobfile:
-                    plist+=str(cell)+" "
-                self.ui.lineEdit_probpoly.setText(plist)
+                # for cell in customertyp.contprobfile:
+                #     plist+=str(cell)+" "
+                self.ui.lineEdit_probpoly.setText(customertyp.contprobfile[0])
         self.ui.comboBox_customertypes.show()
 
         # self.ui.lineEdit_percentofall.setText(str(user_customer.percentofall))
@@ -480,7 +489,8 @@ class SetupGui():
         if self.ui.radioButton_strategyfile.isChecked() is True:
             strategy = str(self.ui.lineEdit_stratefyfile.text())
         elif self.ui.radioButton_strategypoly.isChecked() is True:
-            strategy = [float(p) for p in self.ui.lineEdit_strategypoly.text().split()]
+            strategy = [self.ui.lineEdit_strategypoly.text()]
+            # strategy = [float(p) for p in self.ui.lineEdit_strategypoly.text().split()]
         elif self.ui.radioButton_strategyfixed.isChecked() is True:
             strategy = float(self.ui.lineEdit_strategyfixval.text())
         seller = self.simobj.create_seller(inventory=inventory, strategy=None, name=sellerName)
@@ -642,6 +652,19 @@ class MarketSimulation():
         self.simulation_time = 0
         self.grid_size = 20
 
+    def fix_power_sign(self,equation):
+        return equation.replace("^", "**")
+
+    def eval_polynomial(self,equation, x_value, y_value=None):
+        fixed_equation = self.fix_power_sign(equation.strip())
+        parts = fixed_equation.split("+")
+        x_str_value = str(x_value)
+        parts_with_values = (part.replace("x", x_str_value) for part in parts)
+        if y_value is not None:
+            y_str_value = str(y_value)
+            parts_with_values = (part.replace("y", y_str_value) for part in parts_with_values)
+        partial_values = (eval(part) for part in parts_with_values)
+        return sum(partial_values)
     # customer
 
     def add_customer_type(self, customer_type):
@@ -672,7 +695,8 @@ class MarketSimulation():
             custyp.lambdafixval=generationlambda
         elif isinstance(generationlambda, list):
             print("use polynomial generation ratio")
-            custyp.getLambda = lambda step: np.polyval(generationlambda, int(step))
+            # custyp.getLambda = lambda step: np.polyval(generationlambda, int(step))
+            custyp.getLambda= lambda step: self.eval_polynomial(str(generationlambda[0]),step)
         if callable(forcebuyprob):
             print("use custom function generation ratio")
             custyp.getcontprob = forcebuyprob
@@ -685,18 +709,20 @@ class MarketSimulation():
             custyp.contprobfixval=forcebuyprob
         elif isinstance(forcebuyprob, list):
             print("use polynomial generation ratio")
-            custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, int(tryNo))
+            # custyp.getcontprob = lambda tryNo: np.polyval(forcebuyprob, int(tryNo))
+            custyp.getcontprob= lambda tryNo: self.eval_polynomial(str(forcebuyprob[0]), int(tryNo))
+
         custyp.typeName=name
         return custyp
 
     # seller
-
     def create_seller(self, strategy=None, inventory=None,name=None):
         seller = Seller(len(self.seller_list), Market())
         seller.inventory = inventory
         if strategy is not None:
             if isinstance(strategy,list):
-                seller.strategy=lambda product,step,:polyval2d(step,product.minvalue,strategy)
+                seller.strategy=lambda product,step,:self.eval_polynomial(strategy[0],step,product.minvalue)
+                # seller.strategy=lambda product,step,:polyval2d(step,product.minvalue,strategy)
             elif callable(strategy):
                 seller.strategy=strategy
             elif isinstance(strategy,float):
@@ -716,7 +742,7 @@ class MarketSimulation():
                 for row in infile:
                     inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),
                                                      available=row["count"])
-        elif isinstance(products, dict):
+        elif isinstance(products, list):
             for row in products:
                 inventory[row["name"]] = Product(name=row["name"], minvalue=float(row["minvalue"]),
                                                  available=row["count"])
@@ -762,7 +788,7 @@ class MarketSimulation():
 
     # server
 
-    def run(self):
+    def run(self,visual=True):
         print("server is running ...")
         # self, width=20, height=20, num_customer=50,num_seller=4
 
@@ -783,9 +809,12 @@ class MarketSimulation():
         customer = {"Label": "Customer", "Color": "cornflowerblue"}
         seller = {"Label": "Seller", "Color": "blueviolet"}
         canvas = CanvasGrid(market_portrayal, width, height)
-        chart_count = ChartModule([customer, seller])
-        self.server = ModularServer(Market, [
+        chart_count = ChartModule([customer, seller,])
+        if visual:
+            self.server = ModularServer(Market, [
             canvas, chart_count], name="Market simulation", model_params=self.model_param)
+        else:
+            self.server = ModularServer(Market, [chart_count], name="Market simulation", model_params=self.model_param)
         # self.server.signalobj.closesignal.connect(self.stop)
         self.server.launch()  # emit new Signal with value
 
@@ -793,7 +822,19 @@ class MarketSimulation():
         sim = SetupGui()
 
     def console_run(self):
-        pass
+        height = self.grid_size
+        width = height
+        # self.load3testcustomertype()
+        self.model_param = {
+            "height": height,
+            "width": width,
+            # "grid_size": int(self.gridsize),#change to gridsize
+            "report_address": self.report_path,
+            "max_steps": self.simulation_time,
+            "customerTypes": self.customer_types,
+            "sellers": self.seller_list,
+        }
+        self.is_running = True
 
     def batch_run(self):
         pass
@@ -830,11 +871,11 @@ if __name__ == "__main__":
         sim.add_customer_type(sim.create_customer_type("poortype", 1, {"p1": 300, "p3": 390, "p2": 320}, 10, 0.6))
         sim.add_customer_type(sim.create_customer_type("normaltype", 1, {"p3": 400, "p2": 350, "p1": 300}, 40, 0.5))
         sim.add_customer_type(sim.create_customer_type("richtype", 1, {"p4": 800, "p3": 800}, 5, 0.2))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory1.csv")))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory2.csv")))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory3.csv")))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory3.csv")))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory1.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory1.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory2.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory3.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory3.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory1.csv")))
         sim.run()
     if mode == 3:
         sim.console_run();

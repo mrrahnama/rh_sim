@@ -36,12 +36,15 @@ class Negotiation:
             self.status = "FAILED_PRICE"
         elif status == 3:
             self.status = "FAILED_EMPTY"
+        elif status == 4:
+            self.status = "NOT_EXIST"
 
 class Seller(Agent):
     def __init__(self, unique_id, model,name='', pos=None,inventory=None):
         super().__init__(unique_id, model)
         self.pos = pos
-
+        self.revenuebystep=[]
+        self.laststepinffo={"revenue":0}
         self.inventory_count = 0
         if inventory is None:
             self.inventory = {}
@@ -75,10 +78,18 @@ class Seller(Agent):
     def step(self):
         pass
 
-    def strategy15(self,productname,step,percent = 0.15):
+    def strategy15(self,product,step,percent = 0.15):
+        productname=product.name
         return self.inventory[productname].minvalue*(1+percent)
-    def strategy(self,productname,step,percent = 0.15):
+    def strategy(self,product,step,percent = 0.15):
+        productname=product.name
         return self.inventory[productname].minvalue*(1+percent)
+    def isavilable(self,product_name):
+        if product_name in self.inventory:
+            p = self.inventory.get(product_name)
+            if p.available > 0:
+                return True
+        return False
 
     def sell(self, customer, product_name, price):
         p = self.inventory.get(product_name)
@@ -173,13 +184,13 @@ class Customer(Agent):
 
             if p in seller.inventory:
 
-                price = seller.strategy(p,self.model.schedule.steps)
+                price = seller.strategy(seller.inventory[p],self.model.schedule.steps)
                 # price = seller.inventory.get(p).offervalue
-                if (self.preference_list.get(p) >= price) and (seller.sell(self, p, price)):
-
+                if (self.preference_list.get(p) >= price) and (seller.isavilable(p)):
+                    seller.sell(self, p, price)
                     # price=(self.preference_list.get(p)+seller.inventory.get(p).minvalue)/2
                     # if seller.sell(self, p, price):
-                    print(str(self.unique_id) + "  customer buy " + str(p))
+                    # print(str(self.unique_id) + "  customer buy " + str(p)) #--log
                     self.model.transactions.append(Negotiation(
                         self.model.schedule.steps, seller.unique_id, self.unique_id,self.type_name, p, 1, price))
                     self.alive = False
@@ -195,7 +206,11 @@ class Customer(Agent):
                     seller.failed_transaction += 1
                     self.model.transactions.append(Negotiation(
                         self.model.schedule.steps, seller.unique_id, self.unique_id, self.type_name, p, 1, price, st))
-
+            else:
+                st = 4  # NOT EXIST
+            seller.failed_transaction += 1
+            self.model.transactions.append(Negotiation(
+                self.model.schedule.steps, seller.unique_id, self.unique_id, self.type_name, p, 1, 0, st))
         return False
     def continueporb(self):
         return self.conproblist[self.tryNo]
@@ -208,7 +223,7 @@ class Customer(Agent):
     def ignorShopping(self,tryNo):
         probb=self.model.customerTypesDic[self.type_name].getcontprob(tryNo)
         rn=rnn.random()
-        print(rn,probb,self.unique_id)
+        # print(rn,probb,self.unique_id)
         if rn >  self.model.customerTypesDic[self.type_name].getcontprob(tryNo):
             return True
         return False
