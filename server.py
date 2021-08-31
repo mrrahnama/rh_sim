@@ -62,10 +62,18 @@ class RunThread(QtCore.QThread):
         width = self.model_param.get("width")
         customer = {"Label": "Customer", "Color": "cornflowerblue"}
         seller = {"Label": "Seller", "Color": "blueviolet"}
+        r = lambda: random.randint(0, 255)
+        visuallines=[]
+
+        color = '#%02X%02X%02X' % (r(), r(), r())
+        for seller1 in (self.model_param.get("sellers")).values():
+            color = '#%02X%02X%02X' % (r(), r(), r())
+            visuallines.append({"Label": seller1.name, "Color": color})
         canvas = CanvasGrid(market_portrayal, width, height)
         chart_count = ChartModule([customer, seller])
+        chart_count1 = ChartModule(visuallines)
         self.server = ModularServer(Market, [
-            canvas, chart_count,chart_count], name="Market simulation", model_params=self.model_param)
+            canvas, chart_count1,chart_count], name="Market simulation", model_params=self.model_param)
         self.server.signalobj.closesignal.connect(self.stop)
 
     def run(self):
@@ -271,6 +279,7 @@ class SetupGui():
             self.setCustomerType(self.customerTypes[custyp_name])
 
     def close_GUI(self):
+        self.thread.stop()
         self.MainWindow.close()
 
     def closeEvent(self, event):
@@ -768,6 +777,11 @@ class MarketSimulation():
 
     def add_seller(self, seller):
         if isinstance(seller, Seller):
+            i=2
+            original_name=seller.name
+            while seller.name in self.seller_list.keys():
+                seller.name=original_name+str(i)
+                i+=1
             self.seller_list[seller.name] = seller
 
     def remove_seller(self, seller):
@@ -828,9 +842,9 @@ class MarketSimulation():
 
         r = lambda: random.randint(0, 255)
         color='#%02X%02X%02X' % (r(), r(), r())
-        for i in range(len(self.seller_list)):
+        for seller in self.seller_list.values():
             color = '#%02X%02X%02X' % (r(), r(), r())
-            visuallines.append({"Label":str(i),"Color":color})
+            visuallines.append({"Label":seller.name,"Color":color})
         customer = {"Label": "Customer", "Color": "cornflowerblue"}
         seller = {"Label": "Seller", "Color": "blueviolet"}
 
@@ -842,7 +856,7 @@ class MarketSimulation():
             canvas, chart_count1,chart_count], name="Market simulation", model_params=self.model_param)
         else:
             self.model_param["hasgrid"]=False
-            self.server = ModularServer(Market, [chart_count], name="Market simulation", model_params=self.model_param)
+            self.server = ModularServer(Market, [chart_count1,chart_count], name="Market simulation", model_params=self.model_param)
         # self.server.signalobj.closesignal.connect(self.stop)
         self.server.launch()  # emit new Signal with value
 

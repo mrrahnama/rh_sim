@@ -168,7 +168,7 @@ for custype in customertypes:
         i+=1
     else :
         break
-# simobj.run(visual=False)
+simobj.run(visual=False)
 # for i in range(simobj.simulation_time):
-simobj.console_run()
+# simobj.console_run()
 
