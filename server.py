@@ -4,13 +4,15 @@ import os
 import pickle
 import sys
 import csv
+import copy
+
 from builtins import set
 from numpy.polynomial.polynomial import polyval2d
-
+import random
 import dill
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QTreeWidgetItem, QListWidgetItem
+from PyQt5.QtWidgets import QTreeWidgetItem, QListWidgetItem, QSplashScreen
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import CanvasGrid, ChartModule
 import numpy as np
@@ -18,7 +20,8 @@ from Model import Market, Seller, Customer, CustomerType, Product
 from UI.simui_3_4 import Ui_MainWindow
 from listmange import ListManage
 from treamanage import TreeManage
-
+from PyQt5.QtWidgets import QSplashScreen
+from PyQt5.QtCore import QTimer,Qt
 
 # from UI.styles import breeze_resources
 
@@ -62,7 +65,7 @@ class RunThread(QtCore.QThread):
         canvas = CanvasGrid(market_portrayal, width, height)
         chart_count = ChartModule([customer, seller])
         self.server = ModularServer(Market, [
-            canvas, chart_count], name="Market simulation", model_params=self.model_param)
+            canvas, chart_count,chart_count], name="Market simulation", model_params=self.model_param)
         self.server.signalobj.closesignal.connect(self.stop)
 
     def run(self):
@@ -91,6 +94,7 @@ class SetupGui():
         # file.open(QFile.ReadOnly | QFile.Text)
         # stream = QTextStream(file)
         # app.setStyleSheet(stream.readAll())
+        self.MainWindow.splash = QSplashScreen(QtGui.QPixmap(r'C:\SSD\Uni\Thesis\Source\main\simulator\e.jpg'),flags=Qt.WindowStaysOnTopHint)
         self.ListManagedialog = ListManage(
             "seller", [], self.ui.listWidget_sellerpreferencelist)
         self.treemanagedialog = TreeManage(
@@ -102,17 +106,31 @@ class SetupGui():
         self.lastseller = ""
         self.updatewidgets()
         self.widgetactions()
-        self.MainWindow.show()
+        # self.MainWindow.show()
         self.customerTypes = {}
         self.sellerTypes = {}
         self.simobj=MarketSimulation()
+        self.flashSplash()
+
         # self.thread.start()
         sys.exit(app.exec_())
-
+    # def disableOntop(self):
+    #     self.MainWindow.setWindowFlags(self.MainWindow.windowFlags()^~ Qt.WindowStaysOnTopHint)
+    #     self.MainWindow.show()
+    def flashSplash(self):
+        # By default, SplashScreen will be in the center of the screen.
+        # You can move it to a specific location if you want:
+        # self.splash.move(10,10)
+        self.MainWindow.splash.show()
+        # Close SplashScreen after 2 seconds (2000 ms)
+        QTimer.singleShot(970, self.MainWindow.show)
+        QTimer.singleShot(900, self.MainWindow.splash.close)
+        # QTimer.singleShot(1000, self.disableOntop)
     def updatewidgets(self):
         scriptDir = os.path.dirname(os.path.realpath(__file__))
         self.MainWindow.setWindowIcon(
             QtGui.QIcon(scriptDir + r"\UI\icon\title.png"))
+        # self.MainWindow.setWindowFlags(self.MainWindow.windowFlags() | Qt.WindowStaysOnTopHint)
         self.ui.comboBox_customertypes.addItem("<new>")
         self.ui.Button_newcustomer.hide()
         self.ui.button_newseller.hide()
@@ -750,7 +768,7 @@ class MarketSimulation():
 
     def add_seller(self, seller):
         if isinstance(seller, Seller):
-            self.seller_list[seller.unique_id] = seller
+            self.seller_list[seller.name] = seller
 
     def remove_seller(self, seller):
         if isinstance(seller, int):
@@ -802,18 +820,26 @@ class MarketSimulation():
             "report_address": self.report_path,
             "max_steps": self.simulation_time,
             "customerTypes": self.customer_types,
-            "sellers": self.seller_list,
+            "sellers":copy.copy(self.seller_list),
 
         }
+        visuallines=[]
         self.is_running = True
 
+        r = lambda: random.randint(0, 255)
+        color='#%02X%02X%02X' % (r(), r(), r())
+        for i in range(len(self.seller_list)):
+            color = '#%02X%02X%02X' % (r(), r(), r())
+            visuallines.append({"Label":str(i),"Color":color})
         customer = {"Label": "Customer", "Color": "cornflowerblue"}
         seller = {"Label": "Seller", "Color": "blueviolet"}
+
         canvas = CanvasGrid(market_portrayal, width, height)
+        chart_count1 = ChartModule(visuallines)
         chart_count = ChartModule([customer, seller,])
         if visual:
             self.server = ModularServer(Market, [
-            canvas, chart_count], name="Market simulation", model_params=self.model_param)
+            canvas, chart_count1,chart_count], name="Market simulation", model_params=self.model_param)
         else:
             self.model_param["hasgrid"]=False
             self.server = ModularServer(Market, [chart_count], name="Market simulation", model_params=self.model_param)
@@ -880,8 +906,8 @@ if __name__ == "__main__":
         sim.add_customer_type(sim.create_customer_type("richtype", 1, {"p4": 800, "p3": 800}, 5, 0.2))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory1.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory2.csv")))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory3.csv")))
-        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory3.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory1.csv")))
+        sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory2.csv")))
         sim.add_seller(sim.create_seller(inventory=sim.create_inventory("inventory/inventory1.csv")))
         sim.run()
     if mode == 3:

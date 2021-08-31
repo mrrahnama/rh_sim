@@ -45,11 +45,12 @@ class Market(Model):
             i=1
             for key,val in sellers.items():
                 if isinstance(val, Seller):
-                    val.model = self
-                    val.unique_id=i
-                    sellers[key]=val
+                    newval=copy.deepcopy(val)
+                    newval.model = self
+                    newval.unique_id=i
+                    self.sellers[key]=newval
                     i=i+1
-            self.sellers = sellers
+            # self.sellers = sellers
             self.addsellerGrid()
         if customerTypes is not None:
             for typename,typ in customerTypes.items():
@@ -83,8 +84,14 @@ class Market(Model):
         self.model_data = {
             "Customer": lambda m: len(m.customers),
             "Seller": lambda m: m.number_of_seller}
+        for seller  in self.sellers.values():
+            self.model_data[seller.name]= eval("lambda m:m.sellers['"+seller.name+"'].revenue")
+
     def collectStepReport(self):
         self.step_report.append({"seller_"+str(seller.unique_id) : seller.revenue - seller.laststepinffo['revenue'] for seller in self.sellers.values()})
+        for custype in self.customerTypesDic.values():
+            if isinstance(custype,CustomerType):
+                self.step_report[-1][custype.typeName]=custype.population
         if self.running is False:
             current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             with open(self.report_address + current_time + 'r_step_report.csv', 'w', newline='') as f:
@@ -100,7 +107,7 @@ class Market(Model):
                 w.writeheader()
                 # Build a dictionary of the member names and values...
                 for i in range(len(list(self.sellers.values())[0].inventory)):
-                    w.writerow({seller.unique_id:list(seller.inventory.keys())[i] for seller in self.sellers.values()})
+                    w.writerow({seller.name:list(seller.inventory.keys())[i] for seller in self.sellers.values()})
     def step(self):
         print(" step:" + str(self.schedule.steps) )
         # if not(self.grid.exists_empty_cells()):
@@ -155,6 +162,7 @@ class Market(Model):
             if ll<0:
                 ll=0
             populationSize = int(random.poisson(lam=ll))
+            self.customerTypesDic[customerType.typeName].population=populationSize
             for i in range(populationSize):
                 new_customer = Customer(uid, self)
                 new_customer.lifetime = customerType.sampleCustomer.lifetime
@@ -205,7 +213,7 @@ class Market(Model):
             if self.grid is not None:
                 self.grid.place_agent(new_seller,self.grid.find_empty())
             # self.schedule.add(new_seller)
-            self.sellers[i]=new_seller
+            self.sellers[new_seller.name]=new_seller
     def gen_rand_productlist(self,**kwarg):
         if "price_interval" in kwarg.keys():
             price_interval= kwarg["price_interval"]
@@ -238,6 +246,7 @@ class CustomerType:
             self.sampleCustomer=samplecustomer
         self.lambdaArray = []
         self.contprobArray=[]
+        self.population=0
         self.typeName=typeName
         self.lambdafile=lambdafile
         self.contprobfile=contprobfile

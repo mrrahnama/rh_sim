@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 from server import MarketSimulation
 import random
@@ -25,6 +27,8 @@ def menu():
 import dill
 import numpy as np
 from Model import Product, Market
+import collections
+
 
 
 class AssortmentModel:
@@ -108,7 +112,34 @@ def create_random_seller_for_assortment(AssortmentModelobj, lam_no_product=5, ms
     if isinstance(AssortmentModelobj, AssortmentModel):
         return msim.create_seller(0.0, msim.create_inventory(create_random_invrntory(AssortmentModelobj, msim, lam_no_product)),"random_assortment_seller")
 
+def create_random_customertype(count,preferenceNo,maxlifetime,products):
+    lam = np.random.random(size=count)
+    lam /= lam.sum()
+    lam=lam.tolist()
+    lifetimes = np.random.randint(low=1, high=maxlifetime+1, size=count,dtype=np.intc).tolist()
+    preflist=[]
+    for i in range(count):
+        preflist.append(list(np.random.choice(range(2,len(products)+1),np.random.randint(low=1, high=preferenceNo+1,dtype=np.intc),replace=False).tolist()))
+    return {'lam':list(lam),'lifetime':list(lifetimes),'pref':preflist,'prefmaxcount':preferenceNo,'maxlifetime':maxlifetime,'products':products}
+def create_random_products(count,pricemin,pricemax):
+    products={1:0}
+    sampl = np.random.uniform(low=pricemin, high=pricemax, size=count).tolist()
+    for i in range(2, count + 1):
+        products[i]=sampl[i-1]
+    return products
+import pickle
 
+a = {'hello': 'world'}
+
+mygeratordata=create_random_customertype(400,10,1,create_random_products(50,450,1500))
+with open("customertypes1.pickle", 'wb') as filehandler:
+    # filehandler.write(json.dumps(mygeratordata, indent=4, sort_keys=True))
+    pickle.dump(mygeratordata,filehandler,protocol=pickle.HIGHEST_PROTOCOL)
+with open("customertypes1.jason", 'w') as filehandler:
+    filehandler.write(json.dumps(mygeratordata, indent=4, sort_keys=True))
+print(mygeratordata)
+with open('customertypes1.pickle', 'rb') as handle:
+    unserialized_data = pickle.load(handle)
 fileName = r"C:\SSD\Uni\Thesis\mr eskandari\pref_\model_200x50_1.pickle"
 products = r"C:\SSD\Uni\Thesis\mr eskandari\inventory\model_200x50_1\23\result_023.xlsx"
 with open(fileName, 'rb') as filehandler:

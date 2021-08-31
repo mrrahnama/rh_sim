@@ -63,7 +63,10 @@ class Seller(Agent):
         # "Goal-Directed" or "Derivative-Following"
         self.succesful_transaction = 0
         self.failed_transaction = 0
-        self.name=name
+        if name is '':
+            self.name=str(self.unique_id)
+        else:
+            self.name=name
         self.model=model
         # if not (self.strategy in ["GD", "DF"]):
         #     raise TypeError(
